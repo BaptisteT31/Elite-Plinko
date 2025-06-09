@@ -8,7 +8,7 @@
     body { margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh }
     #wrapper { position:relative; width:650px; height:720px }
     #entry { position:absolute; top:0; left:0; width:500px; height:40px; z-index:2 }
-    #game-container { position:absolute; top:40px; left:0; width:500px; height:600px; border:2px solid #333; background:url("fond3.png") repeat }
+    #game-container { position:absolute; top:40px; left:0; width:500px; height:600px; border:2px solid #333; background:url("bois.png") repeat }
     #plinko { background:transparent }
     #score-zone { position:absolute; top:640px; left:0; width:500px; height:40px; z-index:2 }
     #sidebar { position:absolute; top:40px; left:502px; width:148px; height:680px; background:#fff; border-left:2px solid #333; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center }
@@ -52,10 +52,10 @@
     const soundFiles = {
       peg:       'metal.mp3',
       booster:   'TOONTwang_Plante cartoon 10 (ID 1959)_LS.mp3',
-      barre:     'metal.mp3',
-      losange:   'metal.mp3',
-      triangle:  'metal.mp3',
-      vbar:      'metal.mp3'
+      barre:     'bois.mp3',
+      losange:   'verre2.mp3',
+      triangle:  'bois.mp3',
+      vbar:      'bois.mp3'
     };
     const sounds = {};
     for (const [type, src] of Object.entries(soundFiles)) {
@@ -81,10 +81,10 @@
 
     /* === textures =========================================================== */
     const patterns = {}, texInfo = {
-      peg:{src:'gris.png',size:20},
-      barre:{src:'texture.png',size:40},
+      peg:{src:'pegs.png',size:20},
+      barre:{src:'bois2.png',size:40},
       big:{src:'diamant.png',size:100},
-      triangle:{src:'texture.png',size:40},
+      triangle:{src:'bois2.png',size:40},
       diamond:{src:'losange.png',size:48}
     };
     for (const [k,{src,size}] of Object.entries(texInfo)) {
