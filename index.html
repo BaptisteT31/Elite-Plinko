@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>♛ €lite Plin₭o ♛ – Pour l'élite</title>
+  <title>♛ €lite Plin₭o ♛ – Beta 0.2</title>
   <style>
     /* ────────── mise en page générale ────────── */
     body { margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh }
@@ -23,6 +23,17 @@
     .score-pop { position:absolute; top:0; right:10px; color:green; font:18px sans-serif; opacity:1; transform:translateY(0); transition:transform 1s ease-out,opacity 1s ease-out }
     .slot-pop { position:absolute; top:620px; font:18px sans-serif; color:#fff; text-shadow:0 0 6px #000; pointer-events:none; opacity:1; transform:translateY(0); transition:transform .8s ease-out,opacity .8s ease-out }
     #timer { font:16px sans-serif; margin-top:10px }
+    /* ─── contrôle volume musique de fond ─── */
+    #music-control { margin-top: 15px; width: 100%; }
+    #music-control label { font:14px sans-serif; display:block; text-align:center; margin-bottom:5px; }
+    #music-volume { width:100%; }
+    #music-toggle {
+        font-size: 16px;
+        padding: 5px 10px;
+        cursor: pointer;
+    }
+
+
   </style>
 </head>
 <body>
@@ -35,9 +46,14 @@
       <div id="score-display">Score: 0</div>
       <div id="coins-stack"></div>
       <div id="timer">Prochaine bille dans 5 s</div>
+      <!-- Contrôle du volume musique de fond -->
+      <div id="music-control">
+        <button id="music-toggle">🔊</button>
+      </div>
     </div>
   </div>
-
+<!-- Balise audio pour la musique de fond -->
+  <audio id="bg-music" src="fond-casino.mp3" loop autoplay muted></audio>
   <script>
     /* === constantes ========================================================= */
     const WIDTH = 500, HEIGHT = 600;
@@ -55,20 +71,38 @@
       barre:     'bois.mp3',
       losange:   'verre2.mp3',
       triangle:  'bois.mp3',
-      vbar:      'bois.mp3'
+      vbar:      'bois.mp3',
+      score:     'jeton.mp3'       // <-- nouvelle ligne
     };
     const sounds = {};
     for (const [type, src] of Object.entries(soundFiles)) {
       const audio = new Audio(src);
-      audio.volume = 0.5;
+      audio.volume = 0.1;
       sounds[type] = audio;
     }
-    function playSound(type) {
-      const s = sounds[type];
-      if (!s) return;
-      s.currentTime = 0;
-      s.play();
+    function playSound(type, volumeFactor = 1) {
+        const s = sounds[type];
+        if (!s) return;
+        s.volume = Math.min(1, volumeFactor);
+        s.currentTime = 0;
+        s.play();
     }
+    /* === musique de fond ==================================================== */
+    const bgMusic     = document.getElementById('bg-music');
+    const musicToggle = document.getElementById('music-toggle');
+    musicToggle.addEventListener('click', () => {
+        bgMusic.muted = !bgMusic.muted;
+        musicToggle.textContent = bgMusic.muted ? '🔇' : '🔊';
+    });
+
+    bgMusic.volume = 0.1;
+    bgMusic.play().catch(e => console.log('Lecture auto bloquée', e));
+    // démarre la musique (débloquée) au premier clic sur la page
+    document.body.addEventListener('click', function initMusic() {
+        bgMusic.muted = false;      // retire le muet
+        bgMusic.play().catch(()=>{}); 
+        document.body.removeEventListener('click', initMusic);
+    }, { once: true });
 
     /* === canvas & UI ======================================================== */
     const wrapper = document.getElementById('wrapper');
@@ -180,7 +214,8 @@
         }
         b.vx *= friction; b.vy *= friction;
 
-        playSound(type);
+        const speed = Math.hypot(b.vx, b.vy);
+        playSound(type, speed / 5); // 5 = coefficient d’ajustement, adapte-le si besoin    
 
         if (c.boost) {
           if (c.hits < c.maxHits) {
@@ -210,7 +245,8 @@
         b.vx -= 2*dot*nnx; b.vy -= 2*dot*nny;
         b.vx *= friction; b.vy *= friction;
 
-        playSound(type);
+        const speed = Math.hypot(b.vx, b.vy);
+        playSound(type, speed / 5); // 5 = coefficient d’ajustement, adapte-le si besoin 
       }
     }
 
@@ -229,7 +265,8 @@
         b.vx -= 2*dot*nx; b.vy -= 2*dot*ny;
         b.vx *= friction; b.vy *= friction;
 
-        playSound(type);
+        const speed = Math.hypot(b.vx, b.vy);
+        playSound(type, speed / 5); // 5 = coefficient d’ajustement, adapte-le si besoin 
       }
     }
 
@@ -285,6 +322,7 @@
           const slot = Math.floor(b.x / segW), gain = scores[slot] || 0;
           totalScore += gain;
           scoreDisplay.textContent = `Score: ${totalScore}`;
+          playSound('score');  // <-- joue l'effet sonore de scoring
           popScore(gain);
           popSlotScore(slot, gain);
         }
