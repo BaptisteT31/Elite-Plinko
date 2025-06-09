@@ -1,305 +1,474 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<title>♛ €lite Plin₭o ♛ – Beta 0.1</title>
-<style>
-/* ────────── mise en page générale ────────── */
-body{margin:0;background:#f0f0f0;display:flex;justify-content:center;align-items:center;height:100vh}
-#wrapper{position:relative;width:650px;height:720px}
-#entry{position:absolute;top:0;left:0;width:500px;height:40px;z-index:2}
-#game-container{position:absolute;top:40px;left:0;width:500px;height:600px;border:2px solid #333;background:url("fond3.png") repeat}
-#plinko{background:transparent}
-#score-zone{position:absolute;top:640px;left:0;width:500px;height:40px;z-index:2}
-#sidebar{position:absolute;top:40px;left:502px;width:148px;height:680px;background:#fff;border-left:2px solid #333;padding:10px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center}
-#score-display{font:18px sans-serif;text-align:center;margin-bottom:20px;position:relative}
-#coins-stack{flex:1;overflow-y:auto;display:flex;flex-direction:column-reverse;align-items:center;position:relative}
-.coin{width:20px;height:20px;border-radius:50%;background:gold;border:2px solid #333;margin:4px 0}
-
-/* ─── animations pièces & pops ─── */
-.drop-anim{animation:drop .4s ease forwards}
-@keyframes drop{0%{transform:translateY(-60px);}60%{transform:translateY(10px);}100%{transform:translateY(0);}}
-.remove-anim{animation:remove .3s ease forwards}
-@keyframes remove{0%{transform:translateY(0);opacity:1;}100%{transform:translateY(50px);opacity:0;}}
-.score-pop{position:absolute;top:0;right:10px;color:green;font:18px sans-serif;opacity:1;transform:translateY(0);transition:transform 1s ease-out,opacity 1s ease-out}
-.slot-pop{position:absolute;top:620px;font:18px sans-serif;color:#fff;text-shadow:0 0 6px #000;pointer-events:none;opacity:1;transform:translateY(0);transition:transform .8s ease-out,opacity .8s ease-out}
-#timer{font:16px sans-serif;margin-top:10px}
-</style>
+  <meta charset="UTF-8">
+  <title>♛ €lite Plin₭o ♛ – Pour l'élite</title>
+  <style>
+    /* ────────── mise en page générale ────────── */
+    body { margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh }
+    #wrapper { position:relative; width:650px; height:720px }
+    #entry { position:absolute; top:0; left:0; width:500px; height:40px; z-index:2 }
+    #game-container { position:absolute; top:40px; left:0; width:500px; height:600px; border:2px solid #333; background:url("fond3.png") repeat }
+    #plinko { background:transparent }
+    #score-zone { position:absolute; top:640px; left:0; width:500px; height:40px; z-index:2 }
+    #sidebar { position:absolute; top:40px; left:502px; width:148px; height:680px; background:#fff; border-left:2px solid #333; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center }
+    #score-display { font:18px sans-serif; text-align:center; margin-bottom:20px; position:relative }
+    #coins-stack { flex:1; overflow-y:auto; display:flex; flex-direction:column-reverse; align-items:center; position:relative }
+    .coin { width:20px; height:20px; border-radius:50%; background:gold; border:2px solid #333; margin:4px 0 }
+    /* ─── animations pièces & pops ─── */
+    .drop-anim { animation:drop .4s ease forwards }
+    @keyframes drop { 0%{transform:translateY(-60px);} 60%{transform:translateY(10px);} 100%{transform:translateY(0);} }
+    .remove-anim { animation:remove .3s ease forwards }
+    @keyframes remove { 0%{transform:translateY(0);opacity:1;} 100%{transform:translateY(50px);opacity:0;} }
+    .score-pop { position:absolute; top:0; right:10px; color:green; font:18px sans-serif; opacity:1; transform:translateY(0); transition:transform 1s ease-out,opacity 1s ease-out }
+    .slot-pop { position:absolute; top:620px; font:18px sans-serif; color:#fff; text-shadow:0 0 6px #000; pointer-events:none; opacity:1; transform:translateY(0); transition:transform .8s ease-out,opacity .8s ease-out }
+    #timer { font:16px sans-serif; margin-top:10px }
+  </style>
 </head>
 <body>
-<div id="wrapper">
-  <canvas id="entry" width="500" height="40"></canvas>
-  <div id="game-container"><canvas id="plinko" width="500" height="600"></canvas></div>
-  <canvas id="score-zone" width="500" height="40"></canvas>
+  <div id="wrapper">
+    <canvas id="entry" width="500" height="40"></canvas>
+    <div id="game-container"><canvas id="plinko" width="500" height="600"></canvas></div>
+    <canvas id="score-zone" width="500" height="40"></canvas>
 
-  <div id="sidebar">
-    <div id="score-display">Score: 0</div>
-    <div id="coins-stack"></div>
-    <div id="timer">Prochaine bille dans 5 s</div>
+    <div id="sidebar">
+      <div id="score-display">Score: 0</div>
+      <div id="coins-stack"></div>
+      <div id="timer">Prochaine bille dans 5 s</div>
+    </div>
   </div>
-</div>
 
-<script>
-/* === constantes ========================================================= */
-const WIDTH=500,HEIGHT=600;
-const baseGravity=0.2,friction=0.99;
-const holeCount=7,scores=[10,70,130,500,130,70,10];
-const segW=WIDTH/holeCount;
-const MAX_BALLS=10;
+  <script>
+    /* === constantes ========================================================= */
+    const WIDTH = 500, HEIGHT = 600;
+    const baseGravity = 0.2, friction = 0.99;
+    const holeCount = 7, scores = [10,70,130,500,130,70,10];
+    const segW = WIDTH / holeCount;
+    const MAX_BALLS = 10;
 
-/* === canvas & UI ======================================================== */
-const wrapper=document.getElementById('wrapper');
-const entryCtx=document.getElementById('entry').getContext('2d');
-const ctx=document.getElementById('plinko').getContext('2d');
-const scoreCtx=document.getElementById('score-zone').getContext('2d');
-const scoreDisplay=document.getElementById('score-display');
-const coinsStack=document.getElementById('coins-stack');
-const timerDisplay=document.getElementById('timer');
-
-/* === textures =========================================================== */
-const patterns={}, texInfo={
-  peg:{src:'gris.png',size:20},
-  barre:{src:'texture.png',size:40},
-  big:{src:'diamant.png',size:100},
-  triangle:{src:'texture.png',size:40},
-  diamond:{src:'losange.png',size:48}
-};
-for(const [k,{src,size}] of Object.entries(texInfo)){
-  const img=new Image(); img.src=src;
-  img.onload=()=>{const p=ctx.createPattern(img,'repeat'); if(p?.setTransform)p.setTransform(new DOMMatrix().scale(size/img.width)); patterns[k]=p;};
-}
-const billeImg=new Image(); billeImg.src='coin4.png';
-
-/* === obstacles ========================================================== */
-const vBarW=WIDTH/30,vBarH=HEIGHT/20;
-const verticalBars=Array.from({length:6},(_,i)=>({x:WIDTH*(i+1)/7-vBarW/2,y:HEIGHT-vBarH/2,w:vBarW,h:vBarH,angle:0}));
-const pegs=[{x:WIDTH/9,y:HEIGHT/10},{x:WIDTH*3/10,y:HEIGHT/8},{x:3*WIDTH/16,y:HEIGHT/4.5},{x:WIDTH/2,y:HEIGHT/8},{x:WIDTH-WIDTH*3/10,y:HEIGHT/8},{x:WIDTH-3*WIDTH/16,y:HEIGHT/4.5},{x:WIDTH-WIDTH/9,y:HEIGHT/10},{x:WIDTH-3*WIDTH/13,y:3*HEIGHT/7},{x:WIDTH/10,y:HEIGHT/2},{x:WIDTH/2,y:HEIGHT/2},{x:3*WIDTH/13,y:3*HEIGHT/7},{x:WIDTH-WIDTH/10,y:HEIGHT/2},{x:WIDTH/9,y:HEIGHT-HEIGHT/4},{x:WIDTH/7,y:HEIGHT-2*HEIGHT/17},{x:2*WIDTH/7,y:HEIGHT-3*HEIGHT/17},{x:3*WIDTH/7,y:HEIGHT-2*HEIGHT/17-HEIGHT/35},{x:WIDTH/2,y:HEIGHT-HEIGHT/4},{x:WIDTH-3*WIDTH/7,y:HEIGHT-2*HEIGHT/17-HEIGHT/35},{x:WIDTH-2*WIDTH/7,y:HEIGHT-3*HEIGHT/17},{x:WIDTH-WIDTH/7,y:HEIGHT-2*HEIGHT/17},{x:WIDTH-WIDTH/9,y:HEIGHT-HEIGHT/4}].map(p=>({...p,radius:8}));
-const bigCircles=[{x:140,y:350,radius:50,boost:1.3,hits:0,maxHits:15,scale:1},{x:360,y:350,radius:50,boost:1.3,hits:0,maxHits:15,scale:1}];
-const bars=[{x:170,y:150,w:70,h:22,angle:-Math.PI/4},{x:330,y:150,w:70,h:22,angle:Math.PI/4}];
-const diamond={x:WIDTH/2,y:190,w:40,h:60};
-const triangles=[[{x:30,y:160},{x:0,y:190},{x:0,y:130}],[{x:WIDTH-30,y:160},{x:WIDTH,y:190},{x:WIDTH,y:130}],[{x:20,y:530},{x:0,y:550},{x:0,y:510}],[{x:WIDTH-20,y:530},{x:WIDTH,y:550},{x:WIDTH,y:510}]];
-
-/* === état =============================================================== */
-const holes=[WIDTH/9,WIDTH*3/10,WIDTH/2,WIDTH-WIDTH*3/10,WIDTH-WIDTH/9];
-let balls=[],totalScore=0,coins=10;
-
-/* === UI helpers ========================================================= */
-function updateCoinsDisplay(){coinsStack.innerHTML='';for(let i=0;i<coins;i++){coinsStack.insertAdjacentHTML('beforeend','<div class="coin"></div>');}}
-function popScore(v){const d=document.createElement('div');d.className='score-pop';d.textContent=`+${v}`;scoreDisplay.appendChild(d);requestAnimationFrame(()=>{d.style.transform='translateY(-30px)';d.style.opacity='0';});setTimeout(()=>d.remove(),1000);}
-function popSlotScore(slot,val){const d=document.createElement('div');d.className='slot-pop';d.textContent=`+${val}`;d.style.left=(slot*segW+segW/2-15)+'px';wrapper.appendChild(d);requestAnimationFrame(()=>{d.style.transform='translateY(-25px)';d.style.opacity='0';});setTimeout(()=>d.remove(),800);}
-function boosterFull(c){c.hits=0;totalScore+=1000;scoreDisplay.textContent=`Score: ${totalScore}`;popScore(1000);coins=10;updateCoinsDisplay();}
-
-/* === collisions ========================================================= */
-function collideCircle(b,c){
-  if(!c.boost) b.gravityFactor=1;
-  const dx=b.x-c.x,dy=b.y-c.y,dist=Math.hypot(dx,dy),minD=b.radius+c.radius;
-  if(dist<minD){
-    const nx=dx/dist,ny=dy/dist,ov=minD-dist;
-    b.x+=nx*ov; b.y+=ny*ov;
-    const dot=b.vx*nx+b.vy*ny;
-    b.vx-=2*dot*nx; b.vy-=2*dot*ny;
-    if(c.boost){b.vx*=c.boost; b.vy*=c.boost; b.gravityFactor=0.2;}
-    b.vx*=friction; b.vy*=friction;
-
-    if(c.boost){
-      if(c.hits<c.maxHits){c.hits++; if(c.hits>=c.maxHits) boosterFull(c);}
-      c.scale=1.25;                      // effet trempoline
+    /* ────────────────────────────────────────────────────────────────────────── */
+    /* 1. PRÉCHARGEMENT DES SONS                                                */
+    /* ────────────────────────────────────────────────────────────────────────── */
+    const soundFiles = {
+      peg:       'metal.mp3',
+      booster:   'TOONTwang_Plante cartoon 10 (ID 1959)_LS.mp3',
+      barre:     'metal.mp3',
+      losange:   'metal.mp3',
+      triangle:  'metal.mp3',
+      vbar:      'metal.mp3'
+    };
+    const sounds = {};
+    for (const [type, src] of Object.entries(soundFiles)) {
+      const audio = new Audio(src);
+      audio.volume = 0.5;
+      sounds[type] = audio;
     }
-  }
-}
-function collideRectRot(b,r){
-  b.gravityFactor=1;
-  const dx=b.x-r.x,dy=b.y-r.y,
-        cos=Math.cos(-r.angle),sin=Math.sin(-r.angle),
-        lx=dx*cos-dy*sin,ly=dx*sin+dy*cos,
-        hw=r.w/2+b.radius,hh=r.h/2+b.radius;
-  if(Math.abs(lx)<hw && Math.abs(ly)<hh){
-    const ox=hw-Math.abs(lx),oy=hh-Math.abs(ly);
-    let nx=0,ny=0;
-    if(ox<oy) nx=lx<0?-1:1; else ny=ly<0?-1:1;
-    const nnx=nx*cos+ny*sin, nny=-nx*sin+ny*cos, ov=Math.min(ox,oy);
-    b.x+=nnx*ov; b.y+=nny*ov;
-    const dot=b.vx*nnx+b.vy*nny;
-    b.vx-=2*dot*nnx; b.vy-=2*dot*nny;
-    b.vx*=friction; b.vy*=friction;
-  }
-}
-function collideSegment(b,p1,p2){
-  b.gravityFactor=1;
-  const vx=p2.x-p1.x,vy=p2.y-p1.y,len2=vx*vx+vy*vy;
-  const t=((b.x-p1.x)*vx+(b.y-p1.y)*vy)/len2;
-  if(t<0||t>1) return;
-  const cx=p1.x+t*vx,cy=p1.y+t*vy,
-        dx=b.x-cx,dy=b.y-cy,dist=Math.hypot(dx,dy);
-  if(dist<b.radius){
-    const nx=dx/dist,ny=dy/dist,ov=b.radius-dist;
-    b.x+=nx*ov; b.y+=ny*ov;
-    const dot=b.vx*nx+b.vy*ny;
-    b.vx-=2*dot*nx; b.vy-=2*dot*ny;
-    b.vx*=friction; b.vy*=friction;
-  }
-}
-const collideTriangle=(b,t)=>{collideSegment(b,t[0],t[1]);collideSegment(b,t[1],t[2]);collideSegment(b,t[2],t[0]);};
-function collideDiamond(b,d){
-  collideSegment(b,{x:d.x,y:d.y-d.h/2},{x:d.x+d.w/2,y:d.y});
-  collideSegment(b,{x:d.x+d.w/2,y:d.y},{x:d.x,y:d.y+d.h/2});
-  collideSegment(b,{x:d.x,y:d.y+d.h/2},{x:d.x-d.w/2,y:d.y});
-  collideSegment(b,{x:d.x-d.w/2,y:d.y},{x:d.x,y:d.y-d.h/2});
-}
-
-/* === update ============================================================= */
-function update(){
-  bigCircles.forEach(c=>{if(c.scale>1){c.scale-=0.05;if(c.scale<1)c.scale=1;}});
-  balls.forEach(b=>{
-    if(!b.alive) return;
-    if(b.anim){
-      b.vy+=baseGravity*b.gravityFactor; b.y+=b.vy;
-      if(b.y>=40){b.y=40; b.anim=false;}
-      return;
+    function playSound(type) {
+      const s = sounds[type];
+      if (!s) return;
+      s.currentTime = 0;
+      s.play();
     }
 
-    b.vy+=baseGravity*b.gravityFactor;
-    if(Math.abs(b.vx)<0.05 && Math.abs(b.vy)<0.2) b.vx+=(Math.random()-0.5)*0.2;
-    b.vx*=friction; b.vy*=friction;
-    b.x+=b.vx; b.y+=b.vy;
+    /* === canvas & UI ======================================================== */
+    const wrapper = document.getElementById('wrapper');
+    const entryCtx = document.getElementById('entry').getContext('2d');
+    const ctx      = document.getElementById('plinko').getContext('2d');
+    const scoreCtx = document.getElementById('score-zone').getContext('2d');
+    const scoreDisplay = document.getElementById('score-display');
+    const coinsStack   = document.getElementById('coins-stack');
+    const timerDisplay = document.getElementById('timer');
 
-    if(b.x<b.radius){b.x=b.radius; b.vx*=-1;}
-    if(b.x>WIDTH-b.radius){b.x=WIDTH-b.radius; b.vx*=-1;}
-
-    pegs.forEach(p=>collideCircle(b,p));
-    bigCircles.forEach(c=>collideCircle(b,c));
-    bars.forEach(r=>collideRectRot(b,r));
-    collideDiamond(b,diamond);
-    verticalBars.forEach(r=>collideRectRot(b,r));
-    triangles.forEach(t=>collideTriangle(b,t));
-
-    if(!b.scored && b.y>=HEIGHT-b.radius){
-      b.scored=true;
-      const slot=Math.floor(b.x/segW),gain=scores[slot]||0;
-      totalScore+=gain; scoreDisplay.textContent=`Score: ${totalScore}`;
-      popScore(gain); popSlotScore(slot,gain);
+    /* === textures =========================================================== */
+    const patterns = {}, texInfo = {
+      peg:{src:'gris.png',size:20},
+      barre:{src:'texture.png',size:40},
+      big:{src:'diamant.png',size:100},
+      triangle:{src:'texture.png',size:40},
+      diamond:{src:'losange.png',size:48}
+    };
+    for (const [k,{src,size}] of Object.entries(texInfo)) {
+      const img = new Image(); img.src = src;
+      img.onload = () => {
+        const p = ctx.createPattern(img,'repeat');
+        if (p?.setTransform) p.setTransform(new DOMMatrix().scale(size/img.width));
+        patterns[k] = p;
+      };
     }
-    if(b.y>HEIGHT+b.radius) b.alive=false;
-  });
-  /* purge des billes mortes */
-  balls=balls.filter(b=>b.alive);
-}
+    const billeImg = new Image(); billeImg.src = 'coin4.png';
 
-/* === draw ============================================================== */
-function draw(){
-  ctx.clearRect(0,0,WIDTH,HEIGHT);
+    /* === obstacles ========================================================== */
+    const vBarW = WIDTH/30, vBarH = HEIGHT/20;
+    const verticalBars = Array.from({length:6},(_,i)=>({
+      x: WIDTH*(i+1)/7 - vBarW/2,
+      y: HEIGHT - vBarH/2,
+      w: vBarW, h: vBarH, angle:0
+    }));
+    const pegs=[{x:WIDTH/9,y:HEIGHT/10},{x:WIDTH*3/10,y:HEIGHT/8},{x:3*WIDTH/16,y:HEIGHT/4.5},{x:WIDTH/2,y:HEIGHT/8},{x:WIDTH-WIDTH*3/10,y:HEIGHT/8},{x:WIDTH-3*WIDTH/16,y:HEIGHT/4.5},{x:WIDTH-WIDTH/9,y:HEIGHT/10},{x:WIDTH-3*WIDTH/13,y:3*HEIGHT/7},{x:WIDTH/10,y:HEIGHT/2},{x:WIDTH/2,y:HEIGHT/2},{x:3*WIDTH/13,y:3*HEIGHT/7},{x:WIDTH-WIDTH/10,y:HEIGHT/2},{x:WIDTH/9,y:HEIGHT-HEIGHT/4},{x:WIDTH/7,y:HEIGHT-2*HEIGHT/17},{x:2*WIDTH/7,y:HEIGHT-3*HEIGHT/17},{x:3*WIDTH/7,y:HEIGHT-2*HEIGHT/17-HEIGHT/35},{x:WIDTH/2,y:HEIGHT-HEIGHT/4},{x:WIDTH-3*WIDTH/7,y:HEIGHT-2*HEIGHT/17-HEIGHT/35},{x:WIDTH-2*WIDTH/7,y:HEIGHT-3*HEIGHT/17},{x:WIDTH-WIDTH/7,y:HEIGHT-2*HEIGHT/17},{x:WIDTH-WIDTH/9,y:HEIGHT-HEIGHT/4}].map(p=>({...p,radius:8}));
+    const bigCircles = [
+      {x:140,y:350,radius:50,boost:1.3,hits:0,maxHits:15,scale:1},
+      {x:360,y:350,radius:50,boost:1.3,hits:0,maxHits:15,scale:1}
+    ];
+    const bars = [
+      {x:170,y:150,w:70,h:22,angle:-Math.PI/4},
+      {x:330,y:150,w:70,h:22,angle: Math.PI/4}
+    ];
+    const diamond   = {x:WIDTH/2,y:190,w:40,h:60};
+    const triangles = [
+      [{x:30,y:160},{x:0,y:190},{x:0,y:130}],
+      [{x:WIDTH-30,y:160},{x:WIDTH,y:190},{x:WIDTH,y:130}],
+      [{x:20,y:530},{x:0,y:550},{x:0,y:510}],
+      [{x:WIDTH-20,y:530},{x:WIDTH,y:550},{x:WIDTH,y:510}]
+    ];
 
-  /* barres pivotantes */
-  ctx.fillStyle=patterns.barre||'#666';
-  bars.forEach(r=>{ctx.save();ctx.translate(r.x,r.y);ctx.rotate(r.angle);ctx.fillRect(-r.w/2,-r.h/2,r.w,r.h);ctx.restore();});
+    /* === état =============================================================== */
+    const holes = [WIDTH/9,WIDTH*3/10,WIDTH/2,WIDTH-WIDTH*3/10,WIDTH-WIDTH/9];
+    let balls = [], totalScore = 0, coins = 10;
 
-  /* losange */
-  ctx.save();ctx.translate(diamond.x,diamond.y);
-  ctx.beginPath();ctx.moveTo(0,-diamond.h/2);ctx.lineTo(diamond.w/2,0);ctx.lineTo(0,diamond.h/2);ctx.lineTo(-diamond.w/2,0);ctx.closePath();
-  ctx.fillStyle=patterns.diamond||'#999';ctx.fill();ctx.restore();
-
-  /* triangles */
-  ctx.fillStyle=patterns.triangle||'#555';
-  triangles.forEach(t=>{ctx.beginPath();ctx.moveTo(t[0].x,t[0].y);ctx.lineTo(t[1].x,t[1].y);ctx.lineTo(t[2].x,t[2].y);ctx.closePath();ctx.fill();});
-
-  /* pegs */
-  ctx.fillStyle=patterns.peg||'#333';
-  pegs.forEach(p=>{ctx.beginPath();ctx.arc(p.x,p.y,p.radius,0,2*Math.PI);ctx.fill();});
-
-  /* barres verticales */
-  verticalBars.forEach(r=>{
-    ctx.fillStyle=patterns.barre||'#666';
-    ctx.fillRect(r.x-r.w/2,r.y-r.h/2,r.w,r.h);
-    ctx.strokeStyle='#333';ctx.strokeRect(r.x-r.w/2,r.y-r.h/2,r.w,r.h);
-  });
-
-  /* boosters (trempoline) */
-  bigCircles.forEach(c=>{
-    const R=c.radius*c.scale;
-    ctx.fillStyle=patterns.big||'#333';
-    ctx.beginPath();ctx.arc(c.x,c.y,R,0,2*Math.PI);ctx.fill();
-
-    const frac=c.hits/c.maxHits;
-    if(frac>0){
-      ctx.lineWidth=6; ctx.strokeStyle='gold';
-      ctx.beginPath(); ctx.arc(c.x,c.y,R-8,-Math.PI/2,-Math.PI/2+2*Math.PI*frac); ctx.stroke();
+    /* === UI helpers ========================================================= */
+    function updateCoinsDisplay() {
+      coinsStack.innerHTML = '';
+      for (let i=0; i<coins; i++) {
+        coinsStack.insertAdjacentHTML('beforeend','<div class="coin"></div>');
+      }
     }
-    ctx.lineWidth=2; ctx.strokeStyle='#111';
-    ctx.beginPath();ctx.arc(c.x,c.y,R,0,2*Math.PI);ctx.stroke();
-  });
-
-  /* billes */
-  balls.forEach(b=>{
-    ctx.save();
-    ctx.beginPath();ctx.arc(b.x,b.y,b.radius,0,2*Math.PI);ctx.clip();
-    ctx.drawImage(billeImg,b.x-b.radius,b.y-b.radius,2*b.radius,2*b.radius);
-    ctx.restore();
-  });
-
-  /* barres statiques */
-  drawEntryBar();
-  drawScoreBar();
-}
-
-/* === barres statiques =================================================== */
-function drawEntryBar(){
-  const w=30,h=10;
-  entryCtx.clearRect(0,0,500,40);
-  holes.forEach(x=>{
-    entryCtx.fillStyle='#000';          // noir
-    entryCtx.fillRect(x-w/2,40-h,w,h);
-    entryCtx.strokeStyle='#000';
-    entryCtx.strokeRect(x-w/2,40-h,w,h);
-  });
-}
-function drawScoreBar(){
-  scoreCtx.clearRect(0,0,500,40);
-  for(let i=0;i<holeCount;i++){
-    const seg=i===holeCount-1?500-i*segW:segW;
-    scoreCtx.fillStyle='#5a3e26';       // marron bois foncé
-    scoreCtx.fillRect(i*segW,0,seg,40);
-    scoreCtx.strokeStyle='#333'; scoreCtx.strokeRect(i*segW,0,seg,40);
-
-    scoreCtx.fillStyle='#fff';          // texte blanc
-    scoreCtx.font='bold 16px sans-serif';
-    scoreCtx.textAlign='center'; scoreCtx.textBaseline='middle';
-    scoreCtx.fillText(scores[i],i*segW+seg/2,20);
-  }
-}
-
-/* === minuteur 5 s ======================================================= */
-let nextDrop=5;
-function tickTimer(){
-  nextDrop--; timerDisplay.textContent=`Recharge ${nextDrop}s`;
-  if(nextDrop<=0){
-    if(coins<10){
-      const c=document.createElement('div');c.className='coin drop-anim';coinsStack.appendChild(c);
-      c.addEventListener('animationend',()=>{coins++;updateCoinsDisplay();});
+    function popScore(v) {
+      const d = document.createElement('div');
+      d.className = 'score-pop';
+      d.textContent = `+${v}`;
+      scoreDisplay.appendChild(d);
+      requestAnimationFrame(()=>{
+        d.style.transform='translateY(-30px)';
+        d.style.opacity='0';
+      });
+      setTimeout(()=>d.remove(),1000);
     }
-    nextDrop=5;
-  }
-}
-setInterval(tickTimer,1000);
-
-/* === boucle ============================================================= */
-function loop(){update();draw();requestAnimationFrame(loop);}
-
-/* === lancement ========================================================== */
-drawEntryBar(); drawScoreBar(); updateCoinsDisplay(); loop();
-
-/* === interaction clic entrée =========================================== */
-document.getElementById('entry').addEventListener('click',e=>{
-  const r=e.currentTarget.getBoundingClientRect(),mx=e.clientX-r.left,my=e.clientY-r.top;
-  if(my>=20){
-    let idx=-1; holes.forEach((hx,i)=>{if(mx>=hx-15&&mx<=hx+15) idx=i;});
-    const live=balls.length;            // après purge, == vivantes
-    if(idx!==-1 && coins>0 && live<MAX_BALLS){
-      balls.push({x:holes[idx],y:0,vx:0,vy:0,radius:12,alive:true,anim:true,gravityFactor:1,scored:false});
-      const rem=coinsStack.querySelector('.coin'); rem.classList.add('remove-anim');
-      rem.addEventListener('animationend',()=>{coins--;updateCoinsDisplay();});
+    function popSlotScore(slot,val) {
+      const d = document.createElement('div');
+      d.className = 'slot-pop';
+      d.textContent = `+${val}`;
+      d.style.left = (slot*segW+segW/2-15)+'px';
+      wrapper.appendChild(d);
+      requestAnimationFrame(()=>{
+        d.style.transform='translateY(-25px)';
+        d.style.opacity='0';
+      });
+      setTimeout(()=>d.remove(),800);
     }
-  }
-});
-</script>
+    function boosterFull(c) {
+      c.hits = 0;
+      totalScore += 1000;
+      scoreDisplay.textContent = `Score: ${totalScore}`;
+      popScore(1000);
+      coins = 10;
+      updateCoinsDisplay();
+    }
+
+    /* === collisions avec son ================================================ */
+    function collideCircle(b, c, type) {
+      if (!c.boost) b.gravityFactor = 1;
+      const dx = b.x - c.x, dy = b.y - c.y;
+      const dist = Math.hypot(dx,dy), minD = b.radius + c.radius;
+      if (dist < minD) {
+        // rebond
+        const nx = dx/dist, ny = dy/dist, ov = minD - dist;
+        b.x += nx*ov; b.y += ny*ov;
+        const dot = b.vx*nx + b.vy*ny;
+        b.vx -= 2*dot*nx; b.vy -= 2*dot*ny;
+        if (c.boost) {
+          b.vx *= c.boost; b.vy *= c.boost; b.gravityFactor = 0.2;
+        }
+        b.vx *= friction; b.vy *= friction;
+
+        playSound(type);
+
+        if (c.boost) {
+          if (c.hits < c.maxHits) {
+            c.hits++;
+            if (c.hits >= c.maxHits) boosterFull(c);
+          }
+          c.scale = 1.25;
+        }
+      }
+    }
+
+    function collideRectRot(b, r, type) {
+      b.gravityFactor = 1;
+      const dx = b.x - r.x, dy = b.y - r.y;
+      const cos = Math.cos(-r.angle), sin = Math.sin(-r.angle);
+      const lx = dx*cos - dy*sin, ly = dx*sin + dy*cos;
+      const hw = r.w/2 + b.radius, hh = r.h/2 + b.radius;
+      if (Math.abs(lx) < hw && Math.abs(ly) < hh) {
+        const ox = hw - Math.abs(lx), oy = hh - Math.abs(ly);
+        let nx=0, ny=0;
+        if (ox < oy) nx = lx<0 ? -1 : 1;
+        else        ny = ly<0 ? -1 : 1;
+        const nnx = nx*cos + ny*sin, nny = -nx*sin + ny*cos;
+        const ov = Math.min(ox,oy);
+        b.x += nnx*ov; b.y += nny*ov;
+        const dot = b.vx*nnx + b.vy*nny;
+        b.vx -= 2*dot*nnx; b.vy -= 2*dot*nny;
+        b.vx *= friction; b.vy *= friction;
+
+        playSound(type);
+      }
+    }
+
+    function collideSegment(b, p1, p2, type) {
+      b.gravityFactor = 1;
+      const vx = p2.x - p1.x, vy = p2.y - p1.y;
+      const len2 = vx*vx + vy*vy;
+      const t = ((b.x - p1.x)*vx + (b.y - p1.y)*vy) / len2;
+      if (t<0||t>1) return;
+      const cx = p1.x + t*vx, cy = p1.y + t*vy;
+      const dx = b.x - cx, dy = b.y - cy, dist = Math.hypot(dx,dy);
+      if (dist < b.radius) {
+        const nx = dx/dist, ny = dy/dist, ov = b.radius - dist;
+        b.x += nx*ov; b.y += ny*ov;
+        const dot = b.vx*nx + b.vy*ny;
+        b.vx -= 2*dot*nx; b.vy -= 2*dot*ny;
+        b.vx *= friction; b.vy *= friction;
+
+        playSound(type);
+      }
+    }
+
+    function collideTriangle(b, t, type) {
+      collideSegment(b, t[0], t[1], type);
+      collideSegment(b, t[1], t[2], type);
+      collideSegment(b, t[2], t[0], type);
+    }
+
+    function collideDiamond(b, d, type) {
+      collideSegment(b, {x:d.x,        y:d.y - d.h/2}, {x:d.x + d.w/2, y:d.y},          type);
+      collideSegment(b, {x:d.x + d.w/2, y:d.y},          {x:d.x,        y:d.y + d.h/2}, type);
+      collideSegment(b, {x:d.x,        y:d.y + d.h/2}, {x:d.x - d.w/2, y:d.y},          type);
+      collideSegment(b, {x:d.x - d.w/2, y:d.y},          {x:d.x,        y:d.y - d.h/2}, type);
+    }
+
+    /* === update ============================================================= */
+    function update() {
+      bigCircles.forEach(c=>{
+        if (c.scale > 1) {
+          c.scale -= 0.05;
+          if (c.scale < 1) c.scale = 1;
+        }
+      });
+
+      balls.forEach(b=>{
+        if (!b.alive) return;
+        if (b.anim) {
+          b.vy += baseGravity * b.gravityFactor;
+          b.y += b.vy;
+          if (b.y >= 40) { b.y = 40; b.anim = false; }
+          return;
+        }
+
+        b.vy += baseGravity * b.gravityFactor;
+        if (Math.abs(b.vx)<0.05 && Math.abs(b.vy)<0.2)
+          b.vx += (Math.random()-0.5)*0.2;
+        b.vx *= friction; b.vy *= friction;
+        b.x += b.vx; b.y += b.vy;
+
+        if (b.x < b.radius)           { b.x = b.radius;            b.vx *= -1; }
+        if (b.x > WIDTH - b.radius)   { b.x = WIDTH - b.radius;    b.vx *= -1; }
+
+        pegs.forEach(p      => collideCircle(b, p,       'peg'));
+        bigCircles.forEach(c=> collideCircle(b, c,    'booster'));
+        bars.forEach(r      => collideRectRot(b, r,   'barre'));
+        verticalBars.forEach(r=> collideRectRot(b, r,'vbar'));
+        collideDiamond(b, diamond,                  'losange');
+        triangles.forEach(t  => collideTriangle(b, t,'triangle'));
+
+        if (!b.scored && b.y >= HEIGHT - b.radius) {
+          b.scored = true;
+          const slot = Math.floor(b.x / segW), gain = scores[slot] || 0;
+          totalScore += gain;
+          scoreDisplay.textContent = `Score: ${totalScore}`;
+          popScore(gain);
+          popSlotScore(slot, gain);
+        }
+        if (b.y > HEIGHT + b.radius) b.alive = false;
+      });
+
+      balls = balls.filter(b => b.alive);
+    }
+
+    /* === draw ============================================================== */
+    function draw() {
+      ctx.clearRect(0,0,WIDTH,HEIGHT);
+
+      /* barres pivotantes */
+      ctx.fillStyle = patterns.barre || '#666';
+      bars.forEach(r=>{
+        ctx.save();
+        ctx.translate(r.x,r.y);
+        ctx.rotate(r.angle);
+        ctx.fillRect(-r.w/2,-r.h/2,r.w,r.h);
+        ctx.restore();
+      });
+
+      /* losange */
+      ctx.save();
+      ctx.translate(diamond.x,diamond.y);
+      ctx.beginPath();
+      ctx.moveTo(0,-diamond.h/2);
+      ctx.lineTo(diamond.w/2,0);
+      ctx.lineTo(0,diamond.h/2);
+      ctx.lineTo(-diamond.w/2,0);
+      ctx.closePath();
+      ctx.fillStyle = patterns.diamond || '#999';
+      ctx.fill();
+      ctx.restore();
+
+      /* triangles */
+      ctx.fillStyle = patterns.triangle || '#555';
+      triangles.forEach(t=>{
+        ctx.beginPath();
+        ctx.moveTo(t[0].x,t[0].y);
+        ctx.lineTo(t[1].x,t[1].y);
+        ctx.lineTo(t[2].x,t[2].y);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      /* pegs */
+      ctx.fillStyle = patterns.peg || '#333';
+      pegs.forEach(p=>{
+        ctx.beginPath();
+        ctx.arc(p.x,p.y,p.radius,0,2*Math.PI);
+        ctx.fill();
+      });
+
+      /* barres verticales */
+      verticalBars.forEach(r=>{
+        ctx.fillStyle = patterns.barre || '#666';
+        ctx.fillRect(r.x-r.w/2,r.y-r.h/2,r.w,r.h);
+        ctx.strokeStyle = '#333';
+        ctx.strokeRect(r.x-r.w/2,r.y-r.h/2,r.w,r.h);
+      });
+
+      /* boosters */
+      bigCircles.forEach(c=>{
+        const R = c.radius * c.scale;
+        ctx.fillStyle = patterns.big || '#333';
+        ctx.beginPath();
+        ctx.arc(c.x,c.y,R,0,2*Math.PI);
+        ctx.fill();
+
+        const frac = c.hits/c.maxHits;
+        if (frac>0) {
+          ctx.lineWidth = 6;
+          ctx.strokeStyle = 'gold';
+          ctx.beginPath();
+          ctx.arc(c.x,c.y,R-8,-Math.PI/2,-Math.PI/2+2*Math.PI*frac);
+          ctx.stroke();
+        }
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = '#111';
+        ctx.beginPath();
+        ctx.arc(c.x,c.y,R,0,2*Math.PI);
+        ctx.stroke();
+      });
+
+      /* billes */
+      balls.forEach(b=>{
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(b.x,b.y,b.radius,0,2*Math.PI);
+        ctx.clip();
+        ctx.drawImage(billeImg,b.x-b.radius,b.y-b.radius,2*b.radius,2*b.radius);
+        ctx.restore();
+      });
+
+      /* barres statiques */
+      drawEntryBar();
+      drawScoreBar();
+    }
+
+    /* === barres statiques =================================================== */
+    function drawEntryBar() {
+      const w=30,h=10;
+      entryCtx.clearRect(0,0,500,40);
+      holes.forEach(x=>{
+        entryCtx.fillStyle='#000';
+        entryCtx.fillRect(x-w/2,40-h,w,h);
+        entryCtx.strokeStyle='#000';
+        entryCtx.strokeRect(x-w/2,40-h,w,h);
+      });
+    }
+
+    function drawScoreBar() {
+      scoreCtx.clearRect(0,0,500,40);
+      for (let i=0; i<holeCount; i++) {
+        const seg = i===holeCount-1 ? 500 - i*segW : segW;
+        scoreCtx.fillStyle='#5a3e26';
+        scoreCtx.fillRect(i*segW,0,seg,40);
+        scoreCtx.strokeStyle='#333';
+        scoreCtx.strokeRect(i*segW,0,seg,40);
+
+        scoreCtx.fillStyle='#fff';
+        scoreCtx.font='bold 16px sans-serif';
+        scoreCtx.textAlign='center';
+        scoreCtx.textBaseline='middle';
+        scoreCtx.fillText(scores[i],i*segW+seg/2,20);
+      }
+    }
+
+    /* === minuteur 5 s ======================================================= */
+    let nextDrop = 5;
+    function tickTimer(){
+      nextDrop--;
+      timerDisplay.textContent = `Recharge ${nextDrop}s`;
+      if (nextDrop <= 0) {
+        if (coins < 10) {
+          const c = document.createElement('div');
+          c.className = 'coin drop-anim';
+          coinsStack.appendChild(c);
+          c.addEventListener('animationend',()=>{
+            coins++;
+            updateCoinsDisplay();
+          });
+        }
+        nextDrop = 5;
+      }
+    }
+    setInterval(tickTimer,1000);
+
+    /* === boucle ============================================================= */
+    function loop(){ update(); draw(); requestAnimationFrame(loop); }
+
+    /* === lancement ========================================================== */
+    drawEntryBar();
+    drawScoreBar();
+    updateCoinsDisplay();
+    loop();
+
+    /* === interaction clic entrée =========================================== */
+    document.getElementById('entry').addEventListener('click', e=>{
+      const r = e.currentTarget.getBoundingClientRect();
+      const mx = e.clientX - r.left, my = e.clientY - r.top;
+      if (my >= 20) {
+        let idx = -1;
+        holes.forEach((hx,i)=> {
+          if (mx >= hx-15 && mx <= hx+15) idx = i;
+        });
+        const live = balls.length;
+        if (idx !== -1 && coins > 0 && live < MAX_BALLS) {
+          balls.push({
+            x: holes[idx], y:0, vx:0, vy:0,
+            radius:12, alive:true, anim:true,
+            gravityFactor:1, scored:false
+          });
+          const rem = coinsStack.querySelector('.coin');
+          rem.classList.add('remove-anim');
+          rem.addEventListener('animationend', ()=>{
+            coins--;
+            updateCoinsDisplay();
+          });
+        }
+      }
+    });
+  </script>
 </body>
 </html>
