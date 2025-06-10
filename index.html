@@ -45,7 +45,7 @@
     <div id="sidebar">
       <div id="score-display">Diamants: 0</div>
       <div id="coins-stack"></div>
-      <div id="timer">Prochaine bille dans 5 s</div>
+      <div id="timer">Prochaine pièce dans 5 s</div>
       <!-- Contrôle du volume musique de fond -->
       <div id="music-control">
         <button id="music-toggle">🔊</button>
@@ -191,9 +191,9 @@
     }
     function boosterFull(c) {
       c.hits = 0;
-      totalScore += 100;
-      scoreDisplay.textContent = `Score: ${totalScore}`;
-      popScore(100);
+      totalScore += 1;
+      scoreDisplay.textContent = `Diamants: ${totalScore}`;
+      popScore(1);
     }
 
     /* === collisions avec son ================================================ */
