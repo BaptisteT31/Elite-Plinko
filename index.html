@@ -342,7 +342,7 @@
 
             // 2) Afficher le pop visuel
             playSound('score');
-            const text = (delta > 0 ? '+' : '') + delta + ' bille' + (Math.abs(delta)>1?'s':'');
+            const text = (delta > 0 ? '+' : '') + delta + ' pièce' + (Math.abs(delta)>1?'s':'');
             popSlotScore(slot, text);
 
             // 3) Mettre à jour coins (clamp entre 0 et 10)
