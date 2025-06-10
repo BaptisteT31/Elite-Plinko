@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>♛ €lite Plin₭o ♛ – Alpha 0.2</title>
+  <title>♛ €lite Plin₭o ♛ – Alpha 0.3</title>
   <style>
     /* ────────── mise en page générale ────────── */
     body { margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh }
@@ -43,7 +43,7 @@
     <canvas id="score-zone" width="500" height="40"></canvas>
 
     <div id="sidebar">
-      <div id="score-display">Score: 0</div>
+      <div id="score-display">Diamants: 0</div>
       <div id="coins-stack"></div>
       <div id="timer">Prochaine bille dans 5 s</div>
       <!-- Contrôle du volume musique de fond -->
@@ -58,7 +58,7 @@
     /* === constantes ========================================================= */
     const WIDTH = 500, HEIGHT = 600;
     const baseGravity = 0.2, friction = 0.99;
-    const holeCount = 7, scores = [10,70,130,500,130,70,10];
+    const holeCount = 7, scores = [-1,0,+1,+5,+1,0,-1];
     const segW = WIDTH / holeCount;
     const MAX_BALLS = 10;
 
@@ -116,10 +116,10 @@
     /* === textures =========================================================== */
     const patterns = {}, texInfo = {
       peg:{src:'pegs.png',size:20},
-      barre:{src:'bois2.png',size:40},
+      barre:{src:'bois2.png',size:150},
       big:{src:'diamant.png',size:100},
-      triangle:{src:'bois2.png',size:40},
-      diamond:{src:'losange.png',size:48}
+      triangle:{src:'bois2.png',size:150},
+      diamond:{src:'losange.png',size:200}
     };
     for (const [k,{src,size}] of Object.entries(texInfo)) {
       const img = new Image(); img.src = src;
@@ -134,7 +134,7 @@
     /* === obstacles ========================================================== */
     const vBarW = WIDTH/30, vBarH = HEIGHT/20;
     const verticalBars = Array.from({length:6},(_,i)=>({
-      x: WIDTH*(i+1)/7-WIDTH/200,
+      x: WIDTH*(i+1)/7-WIDTH/300,
       y: HEIGHT - vBarH/2,
       w: vBarW, h: vBarH, angle:0
     }));
@@ -180,7 +180,7 @@
     function popSlotScore(slot,val) {
       const d = document.createElement('div');
       d.className = 'slot-pop';
-      d.textContent = `+${val}`;
+      d.textContent = val;
       d.style.left = (slot*segW+segW/2-15)+'px';
       wrapper.appendChild(d);
       requestAnimationFrame(()=>{
@@ -191,11 +191,9 @@
     }
     function boosterFull(c) {
       c.hits = 0;
-      totalScore += 1000;
+      totalScore += 100;
       scoreDisplay.textContent = `Score: ${totalScore}`;
-      popScore(1000);
-      coins = 10;
-      updateCoinsDisplay();
+      popScore(100);
     }
 
     /* === collisions avec son ================================================ */
@@ -317,15 +315,43 @@
         collideDiamond(b, diamond,                  'losange');
         triangles.forEach(t  => collideTriangle(b, t,'triangle'));
 
+        // À la place de l’ancien « scoring » :
         if (!b.scored && b.y >= HEIGHT - b.radius) {
-          b.scored = true;
-          const slot = Math.floor(b.x / segW), gain = scores[slot] || 0;
-          totalScore += gain;
-          scoreDisplay.textContent = `Score: ${totalScore}`;
-          playSound('score');  // <-- joue l'effet sonore de scoring
-          popScore(gain);
-          popSlotScore(slot, gain);
-        }
+            b.scored = true;
+            const slot = Math.floor(b.x / segW);
+
+            // 1) Définir le nombre de billes à ajouter/enlever
+            let delta = 0;
+            switch (slot) {
+                case 0:
+                case 6:
+                delta = -1;   // zones extrêmes donnent –1 bille
+                break;
+                case 1:
+                case 5:
+                delta = 0;    // deuxième/rising zones donnent 0
+                break;
+                case 2:
+                case 4:
+                delta = 1;    // troisième zones donnent +1
+                break;
+                case 3:
+                delta = 5;    // zone du milieu donne +5
+                break;
+            }
+
+            // 2) Afficher le pop visuel
+            playSound('score');
+            const text = (delta > 0 ? '+' : '') + delta + ' bille' + (Math.abs(delta)>1?'s':'');
+            popSlotScore(slot, text);
+
+            // 3) Mettre à jour coins (clamp entre 0 et 10)
+            coins = Math.min(10, Math.max(0, coins + delta));
+            updateCoinsDisplay();
+
+            }
+
+
         if (b.y > HEIGHT + b.radius) b.alive = false;
       });
 
@@ -396,7 +422,7 @@
         const frac = c.hits/c.maxHits;
         if (frac>0) {
           ctx.lineWidth = 10;
-          ctx.strokeStyle = 'gold';
+          ctx.strokeStyle = 'orange';
           ctx.beginPath();
           ctx.arc(c.x,c.y,R-8,-Math.PI/2,-Math.PI/2+2*Math.PI*frac);
           ctx.stroke();
@@ -431,19 +457,29 @@
     }
 
     function drawScoreBar() {
-      scoreCtx.clearRect(0,0,500,40);
+      scoreCtx.clearRect(0,0,500,30);
       for (let i=0; i<holeCount; i++) {
         const seg = i===holeCount-1 ? 500 - i*segW : segW;
-        scoreCtx.fillStyle='#5a3e26';
-        scoreCtx.fillRect(i*segW,0,seg,40);
-        scoreCtx.strokeStyle='#333';
-        scoreCtx.strokeRect(i*segW,0,seg,40);
+        let color = '#888';
+        switch (scores[i]) {
+        case -1: color = 'red'; break;
+        case 0: color = 'orange'; break;
+        case +1: color = 'yellow'; break;
+        case +5: color = 'green'; break;
+        }
+        scoreCtx.fillStyle = color;
+        scoreCtx.fillRect(i*segW,0,seg,30);
+        scoreCtx.strokeStyle='#fff';
+        scoreCtx.strokeRect(i*segW,0,seg,30);
 
-        scoreCtx.fillStyle='#fff';
+        scoreCtx.fillStyle='#000';
         scoreCtx.font='bold 16px sans-serif';
         scoreCtx.textAlign='center';
         scoreCtx.textBaseline='middle';
-        scoreCtx.fillText(scores[i],i*segW+seg/2,20);
+        // Nouveau : on ajoute '+' seulement si valeur > 0
+        const val   = scores[i];
+        const label = val > 0 ? '+' + val : String(val);
+        scoreCtx.fillText(label, i*segW + seg/2, 15);
       }
     }
 
