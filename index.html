@@ -2,7 +2,7 @@
 <html lang="fr">
 <head>
   <meta charset="UTF-8">
-  <title>♛ €lite Plin₭o ♛ – Beta 0.2</title>
+  <title>♛ €lite Plin₭o ♛ – Pour l'élite</title>
   <style>
     /* ────────── mise en page générale ────────── */
     body { margin:0; background:#f0f0f0; display:flex; justify-content:center; align-items:center; height:100vh }
@@ -10,7 +10,7 @@
     #entry { position:absolute; top:0; left:0; width:500px; height:40px; z-index:2 }
     #game-container { position:absolute; top:40px; left:0; width:500px; height:600px; border:2px solid #333; background:url("bois.png") repeat }
     #plinko { background:transparent }
-    #score-zone { position:absolute; top:640px; left:0; width:500px; height:40px; z-index:2 }
+    #score-zone { position:absolute; top:640px; left:0; width:502px; height:40px; z-index:2 }
     #sidebar { position:absolute; top:40px; left:502px; width:148px; height:680px; background:#fff; border-left:2px solid #333; padding:10px; box-sizing:border-box; display:flex; flex-direction:column; align-items:center }
     #score-display { font:18px sans-serif; text-align:center; margin-bottom:20px; position:relative }
     #coins-stack { flex:1; overflow-y:auto; display:flex; flex-direction:column-reverse; align-items:center; position:relative }
@@ -215,7 +215,7 @@
         b.vx *= friction; b.vy *= friction;
 
         const speed = Math.hypot(b.vx, b.vy);
-        playSound(type, speed / 5); // 5 = coefficient d’ajustement, adapte-le si besoin    
+        playSound(type, speed / 20); // 5 = coefficient d’ajustement, adapte-le si besoin    
 
         if (c.boost) {
           if (c.hits < c.maxHits) {
@@ -246,7 +246,7 @@
         b.vx *= friction; b.vy *= friction;
 
         const speed = Math.hypot(b.vx, b.vy);
-        playSound(type, speed / 5); // 5 = coefficient d’ajustement, adapte-le si besoin 
+        playSound(type, speed / 20); // 5 = coefficient d’ajustement, adapte-le si besoin 
       }
     }
 
@@ -266,7 +266,7 @@
         b.vx *= friction; b.vy *= friction;
 
         const speed = Math.hypot(b.vx, b.vy);
-        playSound(type, speed / 5); // 5 = coefficient d’ajustement, adapte-le si besoin 
+        playSound(type, speed / 20); // 5 = coefficient d’ajustement, adapte-le si besoin 
       }
     }
 
