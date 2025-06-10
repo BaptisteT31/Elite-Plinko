@@ -134,7 +134,7 @@
     /* === obstacles ========================================================== */
     const vBarW = WIDTH/30, vBarH = HEIGHT/20;
     const verticalBars = Array.from({length:6},(_,i)=>({
-      x: WIDTH*(i+1)/7 - vBarW/2,
+      x: WIDTH*(i+1)/7-WIDTH/200,
       y: HEIGHT - vBarH/2,
       w: vBarW, h: vBarH, angle:0
     }));
