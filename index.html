@@ -45,7 +45,7 @@
     <div id="sidebar">
       <div id="score-display">Diamants: 0</div>
       <div id="coins-stack"></div>
-      <div id="timer">Prochaine pièce dans 5 s</div>
+      <div id="timer">Recharge 30 s</div>
       <!-- Contrôle du volume musique de fond -->
       <div id="music-control">
         <button id="music-toggle">🔊</button>
@@ -484,7 +484,7 @@
     }
 
     /* === minuteur 5 s ======================================================= */
-    let nextDrop = 5;
+    let nextDrop = 30;
     function tickTimer(){
       nextDrop--;
       timerDisplay.textContent = `Recharge ${nextDrop}s`;
@@ -498,7 +498,7 @@
             updateCoinsDisplay();
           });
         }
-        nextDrop = 5;
+        nextDrop = 30;
       }
     }
     setInterval(tickTimer,1000);
