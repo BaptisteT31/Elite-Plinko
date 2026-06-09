@@ -83,9 +83,9 @@
     }
 
     #app {
-      width: min(100%, 920px);
+      width: min(100%, 1120px);
       display: grid;
-      grid-template-columns: minmax(320px, 1fr) 300px;
+      grid-template-columns: minmax(680px, 1fr) 300px;
       gap: 16px;
       align-items: stretch;
     }
@@ -495,52 +495,6 @@
       accent-color: var(--gold);
     }
 
-    #history {
-      display: grid;
-      gap: 8px;
-      margin-top: auto;
-    }
-
-    #history-list {
-      display: grid;
-      gap: 6px;
-      min-height: 132px;
-      margin: 0;
-      padding: 0;
-      list-style: none;
-    }
-
-    #history-list li {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 8px;
-      min-height: 34px;
-      padding-bottom: 6px;
-      border-bottom: 1px solid rgba(255, 255, 255, .08);
-      color: var(--muted);
-      font-size: 13px;
-    }
-
-    #history-list .history-main {
-      display: grid;
-      gap: 2px;
-    }
-
-    #history-list .history-meta {
-      color: rgba(248, 243, 220, .62);
-      font-size: 11px;
-      font-weight: 800;
-      text-transform: uppercase;
-    }
-
-    #history-list .gain {
-      color: #91e9b5;
-    }
-
-    #history-list .loss {
-      color: #ff9c8f;
-    }
-
     .slot-flash {
       position: absolute;
       bottom: 0;
@@ -605,6 +559,21 @@
       box-shadow: var(--shadow);
     }
 
+    .playfield {
+      display: grid;
+      grid-template-columns: minmax(150px, 190px) minmax(320px, 520px);
+      gap: 14px;
+      align-items: start;
+      justify-content: center;
+    }
+
+    #mission-panel {
+      position: sticky;
+      top: 18px;
+      max-height: 680px;
+      overflow: auto;
+    }
+
     .setup-panel h2 {
       margin: 0;
       font-size: 28px;
@@ -645,6 +614,16 @@
       }
 
       #sidebar {
+        width: min(100%, 520px);
+        margin-inline: auto;
+      }
+
+      .playfield {
+        grid-template-columns: 1fr;
+      }
+
+      #mission-panel {
+        position: static;
         width: min(100%, 520px);
         margin-inline: auto;
       }
@@ -690,13 +669,20 @@
         <span class="version">Beta 0.8</span>
       </div>
 
-      <div id="board-wrap">
-        <div id="board-scale">
-          <canvas id="entry" width="500" height="40" aria-label="Entrees"></canvas>
-          <div id="game-container">
-            <canvas id="plinko" width="500" height="600" aria-label="Plateau Plinko"></canvas>
+      <div class="playfield">
+        <section id="mission-panel" class="dashboard-card" aria-live="polite">
+          <p class="label">Missions actives</p>
+          <ul id="mission-list"></ul>
+        </section>
+
+        <div id="board-wrap">
+          <div id="board-scale">
+            <canvas id="entry" width="500" height="40" aria-label="Entrees"></canvas>
+            <div id="game-container">
+              <canvas id="plinko" width="500" height="600" aria-label="Plateau Plinko"></canvas>
+            </div>
+            <canvas id="score-zone" width="500" height="40" aria-label="Scores"></canvas>
           </div>
-          <canvas id="score-zone" width="500" height="40" aria-label="Scores"></canvas>
         </div>
       </div>
     </section>
@@ -782,11 +768,6 @@
       </section>
 
       <section class="dashboard-card" aria-live="polite">
-        <p class="label">Mission active</p>
-        <ul id="mission-list"></ul>
-      </section>
-
-      <section class="dashboard-card" aria-live="polite">
         <p class="label">Boosters bleus</p>
         <ul id="booster-list"></ul>
       </section>
@@ -797,13 +778,8 @@
           <button class="bonus-button" type="button" data-bonus="coin">+1 piece <small>3 diamants</small></button>
           <button class="bonus-button" type="button" data-bonus="storage">Stockage <small>8 diamants</small></button>
           <button class="bonus-button" type="button" data-bonus="recharge">Recharge <small>10 diamants</small></button>
-          <button class="bonus-button" type="button" data-bonus="decor">Deco Neon <small>12 diamants</small></button>
+          <button class="bonus-button" type="button" data-bonus="skin">Skin diamant <small>12 diamants</small></button>
         </div>
-      </section>
-
-      <section id="history" aria-live="polite">
-        <p class="label">Derniers coups</p>
-        <ul id="history-list"></ul>
       </section>
     </aside>
   </main>
@@ -878,14 +854,19 @@
     const missionTemplates = [
       { id: 'positive3', label: 'Reussir 3 gains positifs', target: 3, reward: 4 },
       { id: 'boost2', label: 'Remplir 2 boosters', target: 2, reward: 6 },
-      { id: 'coins15', label: 'Finir avec 15 pieces', target: 15, reward: 5 }
+      { id: 'coins15', label: 'Atteindre 15 pieces', target: 15, reward: 5 },
+      { id: 'volumeMax', label: 'Mettre la musique a fond', target: 1, reward: 6, secret: true },
+      { id: 'connected5', label: 'Rester connecte 5 min', target: 300, reward: 10, secret: true },
+      { id: 'slot10', label: 'Cliquer 10 fois le meme slot', target: 10, reward: 8, secret: true },
+      { id: 'malus5', label: 'Faire 5 malus sans gain', target: 5, reward: 12, secret: true },
+      { id: 'gain10', label: 'Faire 10 gains sans malus', target: 10, reward: 14, secret: true }
     ];
 
     const bonusShop = {
       coin: { label: '+1 piece', cost: 3 },
       storage: { label: 'Stockage +2', cost: 8 },
       recharge: { label: 'Recharge rapide', cost: 10 },
-      decor: { label: 'Deco Neon', cost: 12 }
+      skin: { label: 'Skin diamant', cost: 12 }
     };
 
     const soundFiles = {
@@ -929,7 +910,6 @@
     const runStatusDisplay = document.getElementById('run-status');
     const missionList = document.getElementById('mission-list');
     const boosterList = document.getElementById('booster-list');
-    const historyList = document.getElementById('history-list');
     const autoToggle = document.getElementById('auto-toggle');
     const pauseToggle = document.getElementById('pause-toggle');
     const resetRun = document.getElementById('reset-run');
@@ -1007,6 +987,8 @@
 
     const billeImg = new Image();
     billeImg.src = 'coin4.png';
+    const diamondBallImg = new Image();
+    diamondBallImg.src = 'diamant.png';
 
     const vBarW = WIDTH / 30;
     const vBarH = HEIGHT / 20;
@@ -1092,22 +1074,17 @@
           { x: 420, y: 535, radius: 8 }
         ],
         boosters: [
-          { x: 118, y: 355, radius: 36, boost: 1.22, maxHits: 12, name: 'Ouest' },
-          { x: 382, y: 355, radius: 36, boost: 1.22, maxHits: 12, name: 'Est' }
+          { x: 118, y: 360, radius: 32, boost: 1.16, maxHits: 12, name: 'Ouest' },
+          { x: 382, y: 360, radius: 32, boost: 1.16, maxHits: 12, name: 'Est' }
         ],
         bars: [
-          { x: 145, y: 220, w: 82, h: 18, angle: Math.PI / 8 },
-          { x: 355, y: 220, w: 82, h: 18, angle: -Math.PI / 8 },
-          { x: 160, y: 445, w: 74, h: 18, angle: -Math.PI / 7 },
-          { x: 340, y: 445, w: 74, h: 18, angle: Math.PI / 7 },
-          { x: 250, y: 565, w: 96, h: 16, angle: 0 }
+          { x: 150, y: 222, w: 88, h: 18, angle: Math.PI / 9 },
+          { x: 350, y: 222, w: 88, h: 18, angle: -Math.PI / 9 }
         ],
         diamond: { x: WIDTH / 2, y: 325, w: 42, h: 66 },
         triangles: [
-          [{ x: 42, y: 120 }, { x: 0, y: 160 }, { x: 0, y: 80 }],
-          [{ x: WIDTH - 42, y: 120 }, { x: WIDTH, y: 160 }, { x: WIDTH, y: 80 }],
-          [{ x: 58, y: 565 }, { x: 0, y: 600 }, { x: 0, y: 525 }],
-          [{ x: WIDTH - 58, y: 565 }, { x: WIDTH, y: 600 }, { x: WIDTH, y: 525 }]
+          [{ x: 78, y: 150 }, { x: 0, y: 230 }, { x: 0, y: 72 }],
+          [{ x: WIDTH - 78, y: 150 }, { x: WIDTH, y: 230 }, { x: WIDTH, y: 72 }]
         ]
       }
     };
@@ -1134,14 +1111,18 @@
     let paused = true;
     let autoDrop = false;
     let runActive = false;
-    let runOver = false;
     let recharge = BASE_RECHARGE_SECONDS;
     let bestDrop = 0;
     let totalPositive = 0;
     let totalNegative = 0;
     let storageBonus = 0;
     let rechargeBonus = 0;
-    let activeDecoration = 'classic';
+    let activeBallSkin = 'coin';
+    let lastSlotDrop = -1;
+    let sameSlotStreak = 0;
+    let malusStreak = 0;
+    let gainStreak = 0;
+    let connectedSeconds = 0;
     let bestScore = Number(localStorage.getItem('elitePlinkoBestScore') || 0);
     let soundEnabled = localStorage.getItem('elitePlinkoSound') !== 'off';
 
@@ -1295,7 +1276,7 @@
       streakCountDisplay.textContent = streak;
       currentModeDisplay.textContent = `${modeLabel(activeMode)} - ${currentModifier().label}`;
       currentMapDisplay.textContent = currentMap().label;
-      runStatusDisplay.textContent = runOver ? 'Run termine' : runActive ? 'En cours' : 'Pret a jouer';
+      runStatusDisplay.textContent = runActive ? 'En cours' : 'Pret a jouer';
       updateCoinsDisplay();
       updateMissionsDisplay();
       updateBoostersDisplay();
@@ -1316,7 +1297,6 @@
     }
 
     function spendDiamonds(cost) {
-      if (diamonds < cost) return false;
       diamonds -= cost;
       updateStats();
       pulseDiamonds();
@@ -1334,13 +1314,7 @@
     }
 
     function addHistory(label, value, meta = '') {
-      const item = document.createElement('li');
-      const tone = value > 0 ? 'gain' : value < 0 ? 'loss' : '';
-      item.innerHTML = `<span class="history-main"><strong>${label}</strong><span class="history-meta">${meta || 'Coup'}</span></span><strong class="${tone}">${formatDelta(value)}</strong>`;
-      historyList.prepend(item);
-      while (historyList.children.length > 6) {
-        historyList.lastElementChild.remove();
-      }
+      // Journal intentionally hidden in the current UI.
     }
 
     function flashSlot(slot, delta) {
@@ -1387,7 +1361,8 @@
       activeMissions = missionTemplates.map(mission => ({
         ...mission,
         progress: 0,
-        completed: false
+        completed: false,
+        revealed: !mission.secret
       }));
       updateMissionsDisplay();
     }
@@ -1395,6 +1370,7 @@
     function advanceMission(id, amount = 1) {
       const mission = activeMissions.find(item => item.id === id);
       if (!mission || mission.completed) return;
+      if (amount > 0) mission.revealed = true;
       mission.progress = clamp(mission.progress + amount, 0, mission.target);
       if (mission.progress >= mission.target) completeMission(mission);
       updateMissionsDisplay();
@@ -1403,6 +1379,7 @@
     function setMissionProgress(id, value) {
       const mission = activeMissions.find(item => item.id === id);
       if (!mission || mission.completed) return;
+      if (value > 0) mission.revealed = true;
       mission.progress = clamp(value, 0, mission.target);
       if (mission.progress >= mission.target) completeMission(mission);
       updateMissionsDisplay();
@@ -1420,15 +1397,18 @@
       missionList.innerHTML = '';
       activeMissions.forEach(mission => {
         const progress = mission.target ? mission.progress / mission.target : 0;
+        const hidden = mission.secret && !mission.revealed && !mission.completed;
+        const label = hidden ? 'Mission secrete' : mission.label;
+        const progressText = hidden ? '???' : mission.completed ? 'OK' : `${mission.progress}/${mission.target}`;
         const item = document.createElement('li');
         item.className = 'mission-item';
         item.innerHTML = `
           <div class="mission-top">
-            <strong>${mission.label}</strong>
-            <span>${mission.completed ? 'OK' : `${mission.progress}/${mission.target}`}</span>
+            <strong>${label}</strong>
+            <span>${progressText}</span>
           </div>
-          <div class="bar-track"><div class="bar-fill" style="width: ${Math.round(progress * 100)}%"></div></div>
-          <span>+${mission.reward} diamants</span>
+          <div class="bar-track"><div class="bar-fill" style="width: ${hidden ? 0 : Math.round(progress * 100)}%"></div></div>
+          <span>${hidden ? 'Indice cache' : `+${mission.reward} diamants`}</span>
         `;
         missionList.appendChild(item);
       });
@@ -1456,14 +1436,14 @@
     function updateBonusButtons() {
       bonusButtons.forEach(button => {
         const bonus = bonusShop[button.dataset.bonus];
-        const alreadyOwned = button.dataset.bonus === 'decor' && activeDecoration === 'neon';
-        button.disabled = !runActive || runOver || !bonus || alreadyOwned || diamonds < bonus.cost;
+        const alreadyOwned = button.dataset.bonus === 'skin' && activeBallSkin === 'diamond';
+        button.disabled = !runActive || !bonus || alreadyOwned;
       });
     }
 
     function updateMapButtons() {
       mapButtons.forEach(button => {
-        button.disabled = runActive && !runOver;
+        button.disabled = runActive;
       });
     }
 
@@ -1646,9 +1626,20 @@
       if (delta > 0) {
         addDiamonds(delta);
       } else if (delta < 0) {
-        diamonds = clamp(diamonds + delta, 0, Number.MAX_SAFE_INTEGER);
+        diamonds += delta;
         pulseDiamonds();
       }
+
+      if (delta > 0) {
+        gainStreak++;
+        malusStreak = 0;
+        setMissionProgress('gain10', gainStreak);
+      } else if (delta < 0) {
+        malusStreak++;
+        gainStreak = 0;
+        setMissionProgress('malus5', malusStreak);
+      }
+
       if (delta > 0) advanceMission('positive3');
       setMissionProgress('coins15', coins);
       addHistory(`Case ${slot + 1}`, delta, meta);
@@ -1659,12 +1650,7 @@
     }
 
     function checkRunOver() {
-      if (!runActive || runOver || coins > 0 || balls.length > 0) return;
-      runOver = true;
-      runActive = false;
-      autoDrop = false;
-      setPaused(true);
-      showSetupOverlay('over');
+      return;
     }
 
     function update() {
@@ -1747,9 +1733,6 @@
       if (currentMap().tone === 'blue') {
         felt.addColorStop(0, 'rgba(19, 60, 86, .58)');
         felt.addColorStop(1, 'rgba(13, 27, 47, .52)');
-      } else if (activeDecoration === 'neon') {
-        felt.addColorStop(0, 'rgba(35, 31, 83, .62)');
-        felt.addColorStop(1, 'rgba(13, 60, 55, .54)');
       } else {
         felt.addColorStop(0, 'rgba(14, 67, 55, .52)');
         felt.addColorStop(1, 'rgba(6, 30, 27, .48)');
@@ -1763,15 +1746,6 @@
         for (let radius = 70; radius < 320; radius += 44) {
           ctx.beginPath();
           ctx.ellipse(WIDTH / 2, 310, radius * .82, radius, Math.PI / 9, 0, 2 * Math.PI);
-          ctx.stroke();
-        }
-      } else if (activeDecoration === 'neon') {
-        ctx.strokeStyle = 'rgba(84, 255, 218, .16)';
-        ctx.lineWidth = 2;
-        for (let y = 95; y < HEIGHT; y += 74) {
-          ctx.beginPath();
-          ctx.moveTo(30, y);
-          ctx.lineTo(WIDTH - 30, y + 24);
           ctx.stroke();
         }
       }
@@ -1852,7 +1826,9 @@
         ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
         ctx.clip();
 
-        if (billeImg.complete) {
+        if (activeBallSkin === 'diamond' && diamondBallImg.complete) {
+          ctx.drawImage(diamondBallImg, ball.x - ball.radius, ball.y - ball.radius, 2 * ball.radius, 2 * ball.radius);
+        } else if (billeImg.complete) {
           ctx.drawImage(billeImg, ball.x - ball.radius, ball.y - ball.radius, 2 * ball.radius, 2 * ball.radius);
         } else {
           ctx.fillStyle = '#f2c65f';
@@ -1950,9 +1926,17 @@
     }
 
     function dropBall(index = selectedHole) {
-      if (!runActive || runOver || paused || coins <= 0 || balls.length >= MAX_BALLS) return false;
+      if (!runActive || paused || coins <= 0 || balls.length >= MAX_BALLS) return false;
 
       selectedHole = clamp(index, 0, holes.length - 1);
+      if (selectedHole === lastSlotDrop) {
+        sameSlotStreak++;
+      } else {
+        lastSlotDrop = selectedHole;
+        sameSlotStreak = 1;
+      }
+      setMissionProgress('slot10', sameSlotStreak);
+
       coins--;
       drops++;
       recharge = Math.min(recharge, rechargeSeconds());
@@ -2010,7 +1994,7 @@
 
     function setMap(mapId) {
       if (!plinkoMaps[mapId]) return;
-      if (runActive && !runOver) return;
+      if (runActive) return;
       activeMap = mapId;
 
       mapButtons.forEach(button => {
@@ -2036,13 +2020,16 @@
       totalNegative = 0;
       storageBonus = 0;
       rechargeBonus = 0;
-      activeDecoration = 'classic';
+      activeBallSkin = 'coin';
+      lastSlotDrop = -1;
+      sameSlotStreak = 0;
+      malusStreak = 0;
+      gainStreak = 0;
       bigCircles.forEach(circle => {
         circle.hits = 0;
         circle.scale = 1;
         circle.readyPulse = 0;
       });
-      historyList.innerHTML = '';
       resetMissions();
       updateStats();
     }
@@ -2064,23 +2051,15 @@
       pauseToggle.textContent = 'Reprise';
       pauseToggle.setAttribute('aria-pressed', 'true');
 
-      if (reason === 'over') {
-        setupTitle.textContent = 'Run termine';
-        setupCopy.textContent = 'La reserve est vide. Relance un nouveau run quand tu veux.';
-        runSummary.textContent = `Score ${diamonds} | Record ${bestScore} | Gains +${totalPositive} | Pertes -${totalNegative} | Meilleur coup ${formatDelta(bestDrop)}`;
-        startRunButton.textContent = 'Relancer';
-      } else {
-        setupTitle.textContent = 'Preparer le run';
-        setupCopy.textContent = `Choisis ton mode, ta map et ton modificateur. ${currentMap().label}: ${mapDescription(activeMap)}.`;
-        runSummary.textContent = '';
-        startRunButton.textContent = 'Jouer';
-      }
+      setupTitle.textContent = 'Preparer le run';
+      setupCopy.textContent = `Choisis ton mode, ta map et ton modificateur. ${currentMap().label}: ${mapDescription(activeMap)}.`;
+      runSummary.textContent = '';
+      startRunButton.textContent = 'Jouer';
 
       updateStats();
     }
 
     function startRun() {
-      runOver = false;
       resetSession();
       loadMapLayout();
       runActive = true;
@@ -2110,8 +2089,8 @@
       } else if (type === 'recharge') {
         rechargeBonus = clamp(rechargeBonus + 2, 0, 12);
         recharge = Math.min(recharge, rechargeSeconds());
-      } else if (type === 'decor') {
-        activeDecoration = 'neon';
+      } else if (type === 'skin') {
+        activeBallSkin = 'diamond';
       }
 
       addHistory(bonus.label, -bonus.cost, 'Bonus achete');
@@ -2137,7 +2116,7 @@
 
       if (number >= 1 && number <= holes.length) {
         dropBall(number - 1);
-      } else if (event.key === ' ' && runActive && !runOver) {
+      } else if (event.key === ' ' && runActive) {
         event.preventDefault();
         setPaused(!paused);
       }
@@ -2172,7 +2151,7 @@
     startRunButton.addEventListener('click', startRun);
 
     autoToggle.addEventListener('click', () => {
-      if (!runActive || runOver) return;
+      if (!runActive) return;
       autoDrop = !autoDrop;
       autoToggle.setAttribute('aria-pressed', String(autoDrop));
       autoToggle.textContent = autoDrop ? 'Auto on' : 'Auto';
@@ -2180,7 +2159,7 @@
     });
 
     pauseToggle.addEventListener('click', () => {
-      if (!runActive || runOver) return;
+      if (!runActive) return;
       setPaused(!paused);
     });
 
@@ -2191,12 +2170,18 @@
     volumeInput.addEventListener('input', () => {
       bgMusic.volume = Number(volumeInput.value) / 100;
       localStorage.setItem('elitePlinkoVolume', String(bgMusic.volume));
+      if (Number(volumeInput.value) === 100) setMissionProgress('volumeMax', 1);
     });
 
     document.body.addEventListener('pointerdown', unlockAudio, { once: true });
 
     setInterval(() => {
-      if (paused || !runActive || runOver) return;
+      if (runActive) {
+        connectedSeconds++;
+        setMissionProgress('connected5', connectedSeconds);
+      }
+
+      if (paused || !runActive) return;
 
       if (coins < maxCoins()) {
         recharge--;
@@ -2216,7 +2201,7 @@
     }, 1000);
 
     setInterval(() => {
-      if (autoDrop && runActive && !runOver && !paused) {
+      if (autoDrop && runActive && !paused) {
         if (!dropBall(selectedHole)) autoDrop = false;
         autoToggle.setAttribute('aria-pressed', String(autoDrop));
         autoToggle.textContent = autoDrop ? 'Auto on' : 'Auto';
