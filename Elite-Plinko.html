@@ -871,6 +871,16 @@
       score: 'jeton.mp3'
     };
 
+    const soundCooldowns = {
+      peg: 45,
+      booster: 90,
+      barre: 75,
+      losange: 80,
+      triangle: 75,
+      vbar: 75,
+      score: 0
+    };
+
     const wrapper = document.getElementById('board-scale');
     const entry = document.getElementById('entry');
     const entryCtx = entry.getContext('2d');
@@ -913,6 +923,36 @@
       const audio = new Audio(src);
       audio.preload = 'auto';
       sounds[type] = audio;
+    }
+
+    const audioBuffers = {};
+    const lastSoundAt = {};
+    let audioCtx = null;
+
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      return audioCtx;
+    }
+
+    function preloadImpactSounds() {
+      const context = getAudioContext();
+      if (!context) return;
+
+      Object.entries(soundFiles).forEach(([type, src]) => {
+        if (audioBuffers[type]) return;
+        fetch(src)
+          .then(response => response.arrayBuffer())
+          .then(data => context.decodeAudioData(data))
+          .then(buffer => {
+            audioBuffers[type] = buffer;
+          })
+          .catch(() => {
+            audioBuffers[type] = null;
+          });
+      });
     }
 
     const patterns = {};
@@ -1074,6 +1114,9 @@
 
     function unlockAudio() {
       if (!soundEnabled) return;
+      const context = getAudioContext();
+      if (context && context.state === 'suspended') context.resume().catch(() => {});
+      preloadImpactSounds();
       bgMusic.play().catch(() => {});
     }
 
@@ -1088,11 +1131,33 @@
 
     function playSound(type, volumeFactor = 1) {
       if (!soundEnabled) return;
-      const source = sounds[type];
-      if (!source) return;
-      const audio = source.cloneNode();
-      audio.volume = clamp(bgMusic.volume * 1.8 * volumeFactor, 0, .9);
-      audio.play().catch(() => {});
+      const now = performance.now();
+      const cooldown = soundCooldowns[type] ?? 60;
+      if (cooldown && now - (lastSoundAt[type] || 0) < cooldown) return;
+      lastSoundAt[type] = now;
+
+      const context = getAudioContext();
+      const buffer = audioBuffers[type];
+      const volume = clamp(bgMusic.volume * 1.9 * volumeFactor, 0, .9);
+
+      if (context && buffer) {
+        if (context.state === 'suspended') context.resume().catch(() => {});
+        const source = context.createBufferSource();
+        const gain = context.createGain();
+        gain.gain.value = volume;
+        source.buffer = buffer;
+        source.connect(gain);
+        gain.connect(context.destination);
+        source.start(context.currentTime);
+        return;
+      }
+
+      const fallback = sounds[type];
+      if (!fallback) return;
+      fallback.pause();
+      fallback.currentTime = 0;
+      fallback.volume = volume;
+      fallback.play().catch(() => {});
     }
 
     function updateCoinsDisplay(animatedIndex = -1) {
