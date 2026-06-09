@@ -372,6 +372,10 @@
       gap: 8px;
     }
 
+    #bonus-shop {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
     .mode-button,
     .map-button,
     .modifier-button,
@@ -788,11 +792,12 @@
       </section>
 
       <section class="dashboard-card">
-        <p class="label">Actions bonus</p>
+        <p class="label">Boutique</p>
         <div id="bonus-shop">
           <button class="bonus-button" type="button" data-bonus="coin">+1 piece <small>3 diamants</small></button>
-          <button class="bonus-button" type="button" data-bonus="slow">Ralentir <small>5 diamants</small></button>
-          <button class="bonus-button" type="button" data-bonus="reroll">Relance <small>8 diamants</small></button>
+          <button class="bonus-button" type="button" data-bonus="storage">Stockage <small>8 diamants</small></button>
+          <button class="bonus-button" type="button" data-bonus="recharge">Recharge <small>10 diamants</small></button>
+          <button class="bonus-button" type="button" data-bonus="decor">Deco Neon <small>12 diamants</small></button>
         </div>
       </section>
 
@@ -878,8 +883,9 @@
 
     const bonusShop = {
       coin: { label: '+1 piece', cost: 3 },
-      slow: { label: 'Ralentir', cost: 5 },
-      reroll: { label: 'Relance', cost: 8 }
+      storage: { label: 'Stockage +2', cost: 8 },
+      recharge: { label: 'Recharge rapide', cost: 10 },
+      decor: { label: 'Deco Neon', cost: 12 }
     };
 
     const soundFiles = {
@@ -1126,8 +1132,9 @@
     let bestDrop = 0;
     let totalPositive = 0;
     let totalNegative = 0;
-    let slowNextBall = false;
-    let rerollCharges = 0;
+    let storageBonus = 0;
+    let rechargeBonus = 0;
+    let activeDecoration = 'classic';
     let bestScore = Number(localStorage.getItem('elitePlinkoBestScore') || 0);
     let soundEnabled = localStorage.getItem('elitePlinkoSound') !== 'off';
 
@@ -1164,11 +1171,11 @@
     }
 
     function maxCoins() {
-      return currentModifier().maxCoins || BASE_MAX_COINS;
+      return (currentModifier().maxCoins || BASE_MAX_COINS) + storageBonus;
     }
 
     function rechargeSeconds() {
-      return currentModifier().rechargeSeconds || BASE_RECHARGE_SECONDS;
+      return Math.max(4, (currentModifier().rechargeSeconds || BASE_RECHARGE_SECONDS) - rechargeBonus);
     }
 
     function activeScores() {
@@ -1359,7 +1366,7 @@
     function popSlotScore(slot, value) {
       const pop = document.createElement('div');
       pop.className = 'slot-pop';
-      pop.textContent = `${formatDelta(value)} piece${Math.abs(value) > 1 ? 's' : ''}`;
+      pop.textContent = `${formatDelta(value)} diamant${Math.abs(value) > 1 ? 's' : ''}`;
       pop.style.left = `${slot * (100 / holeCount) + (50 / holeCount)}%`;
       wrapper.appendChild(pop);
       requestAnimationFrame(() => {
@@ -1442,7 +1449,8 @@
     function updateBonusButtons() {
       bonusButtons.forEach(button => {
         const bonus = bonusShop[button.dataset.bonus];
-        button.disabled = !runActive || runOver || !bonus || diamonds < bonus.cost;
+        const alreadyOwned = button.dataset.bonus === 'decor' && activeDecoration === 'neon';
+        button.disabled = !runActive || runOver || !bonus || alreadyOwned || diamonds < bonus.cost;
       });
     }
 
@@ -1452,14 +1460,33 @@
       });
     }
 
+    function rainCoinsOnSlots() {
+      const gained = Math.min(holeCount, maxCoins() - coins);
+      coins = clamp(coins + gained, 0, maxCoins());
+
+      for (let slot = 0; slot < holeCount; slot++) {
+        const pop = document.createElement('div');
+        pop.className = 'slot-pop';
+        pop.textContent = '+1 piece';
+        pop.style.left = `${slot * (100 / holeCount) + (50 / holeCount)}%`;
+        wrapper.appendChild(pop);
+        requestAnimationFrame(() => {
+          pop.style.transform = 'translate(-50%, -38px)';
+          pop.style.opacity = '0';
+        });
+        setTimeout(() => pop.remove(), 850);
+      }
+
+      return gained;
+    }
+
     function boosterFull(circle) {
       circle.hits = 0;
       circle.readyPulse = 70;
-      addDiamonds(4);
-      coins = clamp(coins + 1, 0, maxCoins());
+      const gained = rainCoinsOnSlots();
       advanceMission('boost2');
       setMissionProgress('coins15', coins);
-      addHistory('Booster bleu', 4, '+1 piece bonus');
+      addHistory('Booster bleu', gained, 'Pluie de pieces');
       updateStats();
     }
 
@@ -1581,24 +1608,40 @@
       collideSegment(ball, { x: shape.x - shape.w / 2, y: shape.y }, { x: shape.x, y: shape.y - shape.h / 2 }, type);
     }
 
+    function preventDiamondTrap(ball, shape) {
+      const dx = ball.x - shape.x;
+      const dy = ball.y - shape.y;
+      const expandedW = shape.w / 2 + ball.radius * .9;
+      const expandedH = shape.h / 2 + ball.radius * .9;
+      const insideDiamond = Math.abs(dx) / expandedW + Math.abs(dy) / expandedH < 1;
+      const slow = Math.hypot(ball.vx, ball.vy) < .72;
+
+      if (!insideDiamond || !slow) return;
+
+      const side = dx >= 0 ? 1 : -1;
+      ball.x += side * 3.5;
+      ball.y += 4;
+      ball.vx += side * .42;
+      ball.vy = Math.max(ball.vy, 1.15);
+      ball.gravityFactor = 1;
+    }
+
     function scoreBall(ball) {
       ball.scored = true;
       const slot = clamp(Math.floor(ball.x / segW), 0, holeCount - 1);
       let delta = activeScores()[slot];
       let meta = `${modeLabel(activeMode)} / ${currentModifier().label}`;
 
-      if (delta < 0 && rerollCharges > 0) {
-        rerollCharges--;
-        meta = 'Relance utilisee';
-        delta = 0;
-      }
-
-      coins = clamp(coins + delta, 0, maxCoins());
       streak = delta > 0 ? streak + 1 : 0;
       bestDrop = Math.max(bestDrop, delta);
       if (delta > 0) totalPositive += delta;
       if (delta < 0) totalNegative += Math.abs(delta);
-      addDiamonds(Math.max(0, delta));
+      if (delta > 0) {
+        addDiamonds(delta);
+      } else if (delta < 0) {
+        diamonds = clamp(diamonds + delta, 0, Number.MAX_SAFE_INTEGER);
+        pulseDiamonds();
+      }
       if (delta > 0) advanceMission('positive3');
       setMissionProgress('coins15', coins);
       addHistory(`Case ${slot + 1}`, delta, meta);
@@ -1667,6 +1710,7 @@
         bars.forEach(rect => collideRectRot(ball, rect, 'barre'));
         verticalBars.forEach(rect => collideRectRot(ball, rect, 'vbar'));
         collideDiamond(ball, diamond, 'losange');
+        preventDiamondTrap(ball, diamond);
         triangles.forEach(triangle => collideTriangle(ball, triangle, 'triangle'));
 
         if (!ball.scored && ball.y >= HEIGHT - ball.radius) {
@@ -1690,6 +1734,9 @@
       if (currentMap().tone === 'blue') {
         felt.addColorStop(0, 'rgba(19, 60, 86, .58)');
         felt.addColorStop(1, 'rgba(13, 27, 47, .52)');
+      } else if (activeDecoration === 'neon') {
+        felt.addColorStop(0, 'rgba(35, 31, 83, .62)');
+        felt.addColorStop(1, 'rgba(13, 60, 55, .54)');
       } else {
         felt.addColorStop(0, 'rgba(14, 67, 55, .52)');
         felt.addColorStop(1, 'rgba(6, 30, 27, .48)');
@@ -1703,6 +1750,15 @@
         for (let radius = 70; radius < 320; radius += 44) {
           ctx.beginPath();
           ctx.ellipse(WIDTH / 2, 310, radius * .82, radius, Math.PI / 9, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      } else if (activeDecoration === 'neon') {
+        ctx.strokeStyle = 'rgba(84, 255, 218, .16)';
+        ctx.lineWidth = 2;
+        for (let y = 95; y < HEIGHT; y += 74) {
+          ctx.beginPath();
+          ctx.moveTo(30, y);
+          ctx.lineTo(WIDTH - 30, y + 24);
           ctx.stroke();
         }
       }
@@ -1887,19 +1943,17 @@
       coins--;
       drops++;
       recharge = Math.min(recharge, rechargeSeconds());
-      const slow = slowNextBall;
-      slowNextBall = false;
       const speed = currentModifier().speed;
 
       balls.push({
         x: holes[selectedHole],
         y: 0,
-        vx: (Math.random() - .5) * .35 * speed * (slow ? .55 : 1),
+        vx: (Math.random() - .5) * .35 * speed,
         vy: 0,
         radius: 12,
         alive: true,
         anim: true,
-        gravityFactor: speed * (slow ? .62 : 1),
+        gravityFactor: speed,
         scored: false
       });
 
@@ -1967,8 +2021,9 @@
       bestDrop = 0;
       totalPositive = 0;
       totalNegative = 0;
-      slowNextBall = false;
-      rerollCharges = 0;
+      storageBonus = 0;
+      rechargeBonus = 0;
+      activeDecoration = 'classic';
       bigCircles.forEach(circle => {
         circle.hits = 0;
         circle.scale = 1;
@@ -2035,10 +2090,15 @@
       if (type === 'coin') {
         coins = clamp(coins + 1, 0, maxCoins());
         setMissionProgress('coins15', coins);
-      } else if (type === 'slow') {
-        slowNextBall = true;
-      } else if (type === 'reroll') {
-        rerollCharges++;
+      } else if (type === 'storage') {
+        storageBonus += 2;
+        coins = clamp(coins + 2, 0, maxCoins());
+        setMissionProgress('coins15', coins);
+      } else if (type === 'recharge') {
+        rechargeBonus = clamp(rechargeBonus + 2, 0, 12);
+        recharge = Math.min(recharge, rechargeSeconds());
+      } else if (type === 'decor') {
+        activeDecoration = 'neon';
       }
 
       addHistory(bonus.label, -bonus.cost, 'Bonus achete');
