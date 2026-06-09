@@ -231,6 +231,39 @@
         var(--panel-2);
     }
 
+    .shop-mini {
+      position: relative;
+      margin-top: 10px;
+      width: max-content;
+    }
+
+    #shop-toggle {
+      min-width: 42px;
+      min-height: 34px;
+      padding: 4px 10px;
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    #shop-popover {
+      position: absolute;
+      top: calc(100% + 8px);
+      left: 0;
+      z-index: 9;
+      width: 260px;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid rgba(242, 198, 95, .34);
+      border-radius: 8px;
+      background: rgba(18, 22, 24, .98);
+      box-shadow: var(--shadow);
+    }
+
+    #shop-popover[hidden] {
+      display: none;
+    }
+
     .score-card img {
       position: absolute;
       right: -18px;
@@ -398,6 +431,28 @@
       background: rgba(255, 255, 255, .05);
     }
 
+    .mission-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .mission-header .label {
+      margin: 0;
+    }
+
+    #missions-toggle {
+      min-width: 34px;
+      min-height: 30px;
+      padding: 0;
+      font-weight: 900;
+    }
+
+    #mission-panel.is-collapsed #mission-list {
+      display: none;
+    }
+
     .run-status {
       display: flex;
       justify-content: space-between;
@@ -445,7 +500,7 @@
 
     .bar-track {
       height: 7px;
-      overflow: hidden;
+      overflow: visible;
       border-radius: 999px;
       background: rgba(255, 255, 255, .09);
     }
@@ -671,7 +726,10 @@
 
       <div class="playfield">
         <section id="mission-panel" class="dashboard-card" aria-live="polite">
-          <p class="label">Missions actives</p>
+          <div class="mission-header">
+            <p class="label">Missions actives</p>
+            <button id="missions-toggle" type="button" aria-expanded="true" title="Reduire les missions">-</button>
+          </div>
           <ul id="mission-list"></ul>
         </section>
 
@@ -691,6 +749,18 @@
       <section class="score-card" aria-live="polite">
         <p class="label">Diamants</p>
         <p id="score-display">0</p>
+        <div class="shop-mini">
+          <button id="shop-toggle" type="button" aria-expanded="false" title="Boutique">💎</button>
+          <div id="shop-popover" hidden>
+            <p class="label">Boutique</p>
+            <div id="bonus-shop">
+              <button class="bonus-button" type="button" data-bonus="coin">+1 piece <small>3 diamants</small></button>
+              <button class="bonus-button" type="button" data-bonus="storage">Stockage <small>8 diamants</small></button>
+              <button class="bonus-button" type="button" data-bonus="recharge">Recharge <small>10 diamants</small></button>
+              <button class="bonus-button" type="button" data-bonus="skin">Skin diamant <small>12 diamants</small></button>
+            </div>
+          </div>
+        </div>
         <img src="diamant.png" alt="">
       </section>
 
@@ -716,25 +786,6 @@
         </div>
         <div id="timer">Reserve pleine</div>
         <div id="coins-stack"></div>
-      </section>
-
-      <section class="stats-grid">
-        <div class="stat">
-          <span class="label">Record</span>
-          <b id="best-score">0</b>
-        </div>
-        <div class="stat">
-          <span class="label">En jeu</span>
-          <b id="live-count">0</b>
-        </div>
-        <div class="stat">
-          <span class="label">Lancers</span>
-          <b id="drop-count">0</b>
-        </div>
-        <div class="stat">
-          <span class="label">Serie</span>
-          <b id="streak-count">0</b>
-        </div>
       </section>
 
       <section class="controls">
@@ -767,20 +818,6 @@
         </div>
       </section>
 
-      <section class="dashboard-card" aria-live="polite">
-        <p class="label">Boosters bleus</p>
-        <ul id="booster-list"></ul>
-      </section>
-
-      <section class="dashboard-card">
-        <p class="label">Boutique</p>
-        <div id="bonus-shop">
-          <button class="bonus-button" type="button" data-bonus="coin">+1 piece <small>3 diamants</small></button>
-          <button class="bonus-button" type="button" data-bonus="storage">Stockage <small>8 diamants</small></button>
-          <button class="bonus-button" type="button" data-bonus="recharge">Recharge <small>10 diamants</small></button>
-          <button class="bonus-button" type="button" data-bonus="skin">Skin diamant <small>12 diamants</small></button>
-        </div>
-      </section>
     </aside>
   </main>
 
@@ -909,6 +946,8 @@
     const currentMapDisplay = document.getElementById('current-map');
     const runStatusDisplay = document.getElementById('run-status');
     const missionList = document.getElementById('mission-list');
+    const missionPanel = document.getElementById('mission-panel');
+    const missionsToggle = document.getElementById('missions-toggle');
     const boosterList = document.getElementById('booster-list');
     const autoToggle = document.getElementById('auto-toggle');
     const pauseToggle = document.getElementById('pause-toggle');
@@ -921,6 +960,8 @@
     const setupCopy = document.getElementById('setup-copy');
     const runSummary = document.getElementById('run-summary');
     const startRunButton = document.getElementById('start-run');
+    const shopToggle = document.getElementById('shop-toggle');
+    const shopPopover = document.getElementById('shop-popover');
     const modeButtons = Array.from(document.querySelectorAll('.mode-button'));
     const mapButtons = Array.from(document.querySelectorAll('.map-button'));
     const modifierButtons = Array.from(document.querySelectorAll('.modifier-button'));
@@ -1270,10 +1311,10 @@
 
     function updateStats() {
       scoreDisplay.textContent = diamonds;
-      bestScoreDisplay.textContent = bestScore;
-      liveCountDisplay.textContent = balls.length;
-      dropCountDisplay.textContent = drops;
-      streakCountDisplay.textContent = streak;
+      if (bestScoreDisplay) bestScoreDisplay.textContent = bestScore;
+      if (liveCountDisplay) liveCountDisplay.textContent = balls.length;
+      if (dropCountDisplay) dropCountDisplay.textContent = drops;
+      if (streakCountDisplay) streakCountDisplay.textContent = streak;
       currentModeDisplay.textContent = `${modeLabel(activeMode)} - ${currentModifier().label}`;
       currentMapDisplay.textContent = currentMap().label;
       runStatusDisplay.textContent = runActive ? 'En cours' : 'Pret a jouer';
@@ -1370,7 +1411,6 @@
     function advanceMission(id, amount = 1) {
       const mission = activeMissions.find(item => item.id === id);
       if (!mission || mission.completed) return;
-      if (amount > 0) mission.revealed = true;
       mission.progress = clamp(mission.progress + amount, 0, mission.target);
       if (mission.progress >= mission.target) completeMission(mission);
       updateMissionsDisplay();
@@ -1379,7 +1419,6 @@
     function setMissionProgress(id, value) {
       const mission = activeMissions.find(item => item.id === id);
       if (!mission || mission.completed) return;
-      if (value > 0) mission.revealed = true;
       mission.progress = clamp(value, 0, mission.target);
       if (mission.progress >= mission.target) completeMission(mission);
       updateMissionsDisplay();
@@ -1388,6 +1427,7 @@
     function completeMission(mission) {
       mission.completed = true;
       mission.progress = mission.target;
+      mission.revealed = true;
       addDiamonds(mission.reward);
       addHistory('Mission terminee', mission.reward, mission.label);
     }
@@ -1397,9 +1437,9 @@
       missionList.innerHTML = '';
       activeMissions.forEach(mission => {
         const progress = mission.target ? mission.progress / mission.target : 0;
-        const hidden = mission.secret && !mission.revealed && !mission.completed;
+        const hidden = mission.secret && !mission.completed;
         const label = hidden ? 'Mission secrete' : mission.label;
-        const progressText = hidden ? '???' : mission.completed ? 'OK' : `${mission.progress}/${mission.target}`;
+        const progressText = hidden ? '?' : mission.completed ? 'OK' : `${mission.progress}/${mission.target}`;
         const item = document.createElement('li');
         item.className = 'mission-item';
         item.innerHTML = `
@@ -1407,8 +1447,8 @@
             <strong>${label}</strong>
             <span>${progressText}</span>
           </div>
-          <div class="bar-track"><div class="bar-fill" style="width: ${hidden ? 0 : Math.round(progress * 100)}%"></div></div>
-          <span>${hidden ? 'Indice cache' : `+${mission.reward} diamants`}</span>
+          ${hidden ? '' : `<div class="bar-track"><div class="bar-fill" style="width: ${Math.round(progress * 100)}%"></div></div>`}
+          <span>${hidden ? 'Cachee jusqua validation' : `+${mission.reward} diamants`}</span>
         `;
         missionList.appendChild(item);
       });
@@ -1613,6 +1653,26 @@
       ball.gravityFactor = 1;
     }
 
+    function preventObstacleStall(ball) {
+      const movement = Math.hypot(ball.x - ball.lastX, ball.y - ball.lastY);
+      const speed = Math.hypot(ball.vx, ball.vy);
+      const trapped = movement < .18 && speed < .42 && ball.y > 60 && ball.y < HEIGHT - 58;
+
+      ball.stallFrames = trapped ? ball.stallFrames + 1 : 0;
+      ball.lastX = ball.x;
+      ball.lastY = ball.y;
+
+      if (ball.stallFrames < 42) return;
+
+      const side = ball.x < WIDTH / 2 ? 1 : -1;
+      ball.x = clamp(ball.x + side * 5, ball.radius, WIDTH - ball.radius);
+      ball.y += 6;
+      ball.vx += side * .42;
+      ball.vy = Math.max(ball.vy, 1.25);
+      ball.gravityFactor = 1;
+      ball.stallFrames = 0;
+    }
+
     function scoreBall(ball) {
       ball.scored = true;
       const slot = clamp(Math.floor(ball.x / segW), 0, holeCount - 1);
@@ -1711,6 +1771,7 @@
         collideDiamond(ball, diamond, 'losange');
         preventDiamondTrap(ball, diamond);
         triangles.forEach(triangle => collideTriangle(ball, triangle, 'triangle'));
+        preventObstacleStall(ball);
 
         if (!ball.scored && ball.y >= HEIGHT - ball.radius) {
           scoreBall(ball);
@@ -1880,26 +1941,18 @@
 
     function drawScoreBar() {
       const scores = activeScores();
+      const minScore = Math.min(...scores);
+      const maxScore = Math.max(...scores);
       scoreCtx.clearRect(0, 0, WIDTH, 40);
 
       for (let i = 0; i < holeCount; i++) {
         const seg = i === holeCount - 1 ? WIDTH - i * segW : segW;
         const score = scores[i];
         const gradient = scoreCtx.createLinearGradient(0, 0, 0, 40);
-
-        if (score < 0) {
-          gradient.addColorStop(0, '#f06954');
-          gradient.addColorStop(1, '#7a1f1f');
-        } else if (score === 0) {
-          gradient.addColorStop(0, '#e5a84a');
-          gradient.addColorStop(1, '#8a5420');
-        } else if (score < 5) {
-          gradient.addColorStop(0, '#ffe177');
-          gradient.addColorStop(1, '#b88926');
-        } else {
-          gradient.addColorStop(0, '#65e199');
-          gradient.addColorStop(1, '#1f7c51');
-        }
+        const ratio = maxScore === minScore ? .5 : (score - minScore) / (maxScore - minScore);
+        const hue = 4 + ratio * 126;
+        gradient.addColorStop(0, `hsl(${hue}, 78%, 66%)`);
+        gradient.addColorStop(1, `hsl(${hue}, 72%, 36%)`);
 
         scoreCtx.fillStyle = gradient;
         scoreCtx.fillRect(i * segW, 0, seg, 40);
@@ -1951,7 +2004,10 @@
         alive: true,
         anim: true,
         gravityFactor: speed,
-        scored: false
+        scored: false,
+        lastX: holes[selectedHole],
+        lastY: 0,
+        stallFrames: 0
       });
 
       updateStats();
@@ -2148,6 +2204,18 @@
       button.addEventListener('click', () => buyBonus(button.dataset.bonus));
     });
 
+    shopToggle.addEventListener('click', () => {
+      const open = shopPopover.hidden;
+      shopPopover.hidden = !open;
+      shopToggle.setAttribute('aria-expanded', String(open));
+    });
+
+    missionsToggle.addEventListener('click', () => {
+      const collapsed = missionPanel.classList.toggle('is-collapsed');
+      missionsToggle.textContent = collapsed ? '+' : '-';
+      missionsToggle.setAttribute('aria-expanded', String(!collapsed));
+    });
+
     startRunButton.addEventListener('click', startRun);
 
     autoToggle.addEventListener('click', () => {
@@ -2176,10 +2244,8 @@
     document.body.addEventListener('pointerdown', unlockAudio, { once: true });
 
     setInterval(() => {
-      if (runActive) {
-        connectedSeconds++;
-        setMissionProgress('connected5', connectedSeconds);
-      }
+      connectedSeconds++;
+      setMissionProgress('connected5', connectedSeconds);
 
       if (paused || !runActive) return;
 
