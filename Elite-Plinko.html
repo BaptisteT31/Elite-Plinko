@@ -1,0 +1,1306 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elite Plinko - Beta 0.7</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --ink: #f8f3dc;
+      --muted: #b8ad91;
+      --felt: #12382f;
+      --felt-2: #0a211d;
+      --gold: #f2c65f;
+      --gold-soft: rgba(242, 198, 95, .16);
+      --ruby: #d34848;
+      --green: #3bc17d;
+      --panel: rgba(18, 22, 24, .92);
+      --panel-2: rgba(32, 29, 24, .94);
+      --line: rgba(248, 243, 220, .18);
+      --shadow: 0 22px 60px rgba(0, 0, 0, .38);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      padding: 24px;
+      display: grid;
+      place-items: center;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 12% 16%, rgba(61, 193, 125, .20), transparent 30%),
+        radial-gradient(circle at 86% 14%, rgba(211, 72, 72, .18), transparent 24%),
+        linear-gradient(145deg, #171212 0%, #111716 42%, #251914 100%);
+      overflow-x: hidden;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      color: var(--ink);
+      background: rgba(255, 255, 255, .06);
+      cursor: pointer;
+      transition: transform .16s ease, border-color .16s ease, background .16s ease;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      border-color: rgba(242, 198, 95, .55);
+      background: rgba(242, 198, 95, .10);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    button[aria-pressed="true"],
+    .mode-button.is-active {
+      color: #1d1710;
+      border-color: rgba(242, 198, 95, .88);
+      background: linear-gradient(180deg, #ffe08a, #c8922d);
+      box-shadow: 0 8px 18px rgba(242, 198, 95, .16);
+    }
+
+    #app {
+      width: min(100%, 920px);
+      display: grid;
+      grid-template-columns: minmax(320px, 1fr) 300px;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    #table {
+      min-width: 0;
+    }
+
+    .topline {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: end;
+      margin-bottom: 12px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 48px);
+      line-height: .95;
+      letter-spacing: 0;
+      text-transform: uppercase;
+    }
+
+    .version {
+      display: inline-flex;
+      align-items: center;
+      min-height: 28px;
+      padding: 4px 10px;
+      border: 1px solid rgba(242, 198, 95, .35);
+      border-radius: 8px;
+      color: var(--gold);
+      background: rgba(0, 0, 0, .18);
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+    }
+
+    #board-wrap {
+      width: min(100%, 520px);
+      margin-inline: auto;
+      padding: 10px;
+      border: 1px solid rgba(242, 198, 95, .28);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .08), rgba(255, 255, 255, .02)),
+        url("bois5.png") repeat;
+      box-shadow: var(--shadow);
+    }
+
+    #board-scale {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 500 / 680;
+      border: 2px solid rgba(18, 11, 5, .88);
+      border-radius: 6px;
+      overflow: hidden;
+      background:
+        linear-gradient(180deg, rgba(16, 61, 49, .88), rgba(8, 32, 29, .94)),
+        url("bois5.png") repeat;
+    }
+
+    canvas {
+      display: block;
+    }
+
+    #entry {
+      position: absolute;
+      inset: 0 auto auto 0;
+      width: 100%;
+      height: 5.8823529412%;
+      z-index: 3;
+      background: linear-gradient(180deg, rgba(0, 0, 0, .22), rgba(255, 255, 255, .04));
+      cursor: pointer;
+    }
+
+    #game-container {
+      position: absolute;
+      top: 5.8823529412%;
+      left: 0;
+      width: 100%;
+      height: 88.2352941176%;
+      overflow: hidden;
+      background:
+        radial-gradient(circle at 50% 32%, rgba(242, 198, 95, .10), transparent 38%),
+        url("bois5.png") repeat;
+    }
+
+    #plinko {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+    }
+
+    #score-zone {
+      position: absolute;
+      left: 0;
+      bottom: 0;
+      width: 100%;
+      height: 5.8823529412%;
+      z-index: 2;
+      background: rgba(0, 0, 0, .35);
+    }
+
+    .slot-pop {
+      position: absolute;
+      top: 91%;
+      min-width: 50px;
+      text-align: center;
+      font-weight: 800;
+      color: var(--ink);
+      text-shadow: 0 2px 8px rgba(0, 0, 0, .8);
+      pointer-events: none;
+      opacity: 1;
+      transform: translate(-50%, 0);
+      transition: transform .8s ease-out, opacity .8s ease-out;
+      z-index: 5;
+    }
+
+    #sidebar {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background:
+        linear-gradient(180deg, rgba(255, 255, 255, .08), transparent 22%),
+        var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .score-card {
+      position: relative;
+      min-height: 112px;
+      padding: 14px;
+      border: 1px solid rgba(242, 198, 95, .30);
+      border-radius: 8px;
+      overflow: hidden;
+      background:
+        linear-gradient(135deg, rgba(242, 198, 95, .19), rgba(59, 193, 125, .08)),
+        var(--panel-2);
+    }
+
+    .score-card img {
+      position: absolute;
+      right: -18px;
+      bottom: -28px;
+      width: 124px;
+      opacity: .38;
+      pointer-events: none;
+      transform: rotate(-10deg);
+    }
+
+    .label {
+      margin: 0 0 6px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+    }
+
+    #score-display {
+      margin: 0;
+      font-size: 42px;
+      font-weight: 900;
+      line-height: 1;
+      color: var(--gold);
+    }
+
+    .score-pop {
+      position: absolute;
+      top: 18px;
+      right: 18px;
+      color: var(--green);
+      font-size: 20px;
+      font-weight: 900;
+      opacity: 1;
+      transform: translateY(0);
+      transition: transform .9s ease-out, opacity .9s ease-out;
+    }
+
+    .wallet {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    #coins-count {
+      font-size: 26px;
+      font-weight: 900;
+    }
+
+    #timer {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #coins-stack {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 6px;
+      min-height: 46px;
+    }
+
+    .coin {
+      width: 100%;
+      aspect-ratio: 1;
+      max-width: 20px;
+      justify-self: center;
+      border: 2px solid rgba(40, 25, 4, .72);
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 35% 32%, #fff2a6 0 16%, #f3c54f 17% 48%, #a96c16 49% 100%);
+      box-shadow: 0 2px 0 rgba(0, 0, 0, .35);
+    }
+
+    .coin.is-empty {
+      opacity: .18;
+      background: rgba(255, 255, 255, .08);
+    }
+
+    .drop-anim {
+      animation: drop .42s ease forwards;
+    }
+
+    @keyframes drop {
+      0% { transform: translateY(-40px) scale(.75); opacity: 0; }
+      65% { transform: translateY(5px) scale(1.08); opacity: 1; }
+      100% { transform: translateY(0) scale(1); opacity: 1; }
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
+    }
+
+    .stat {
+      min-width: 0;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: rgba(255, 255, 255, .05);
+    }
+
+    .stat b {
+      display: block;
+      margin-top: 4px;
+      color: var(--ink);
+      font-size: 21px;
+      line-height: 1;
+    }
+
+    .controls {
+      display: grid;
+      gap: 10px;
+    }
+
+    .mode-row,
+    .button-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .mode-button {
+      padding-inline: 6px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    .button-row button {
+      font-weight: 800;
+    }
+
+    .sound-row {
+      display: grid;
+      grid-template-columns: 70px 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    #music-volume {
+      width: 100%;
+      accent-color: var(--gold);
+    }
+
+    #history {
+      display: grid;
+      gap: 8px;
+      margin-top: auto;
+    }
+
+    #history-list {
+      display: grid;
+      gap: 6px;
+      min-height: 132px;
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    #history-list li {
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      min-height: 22px;
+      padding-bottom: 6px;
+      border-bottom: 1px solid rgba(255, 255, 255, .08);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    #history-list .gain {
+      color: #91e9b5;
+    }
+
+    #history-list .loss {
+      color: #ff9c8f;
+    }
+
+    @media (max-width: 820px) {
+      body {
+        padding: 14px;
+        align-items: start;
+      }
+
+      #app {
+        grid-template-columns: 1fr;
+      }
+
+      #sidebar {
+        width: min(100%, 520px);
+        margin-inline: auto;
+      }
+    }
+
+    @media (max-width: 420px) {
+      h1 {
+        font-size: 28px;
+      }
+
+      .topline {
+        align-items: start;
+        flex-direction: column;
+      }
+
+      .mode-row,
+      .button-row {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main id="app" aria-label="Elite Plinko">
+    <section id="table">
+      <div class="topline">
+        <h1>Elite Plinko</h1>
+        <span class="version">Beta 0.7</span>
+      </div>
+
+      <div id="board-wrap">
+        <div id="board-scale">
+          <canvas id="entry" width="500" height="40" aria-label="Entrees"></canvas>
+          <div id="game-container">
+            <canvas id="plinko" width="500" height="600" aria-label="Plateau Plinko"></canvas>
+          </div>
+          <canvas id="score-zone" width="500" height="40" aria-label="Scores"></canvas>
+        </div>
+      </div>
+    </section>
+
+    <aside id="sidebar">
+      <section class="score-card" aria-live="polite">
+        <p class="label">Diamants</p>
+        <p id="score-display">0</p>
+        <img src="diamant.png" alt="">
+      </section>
+
+      <section class="wallet" aria-live="polite">
+        <div>
+          <p class="label">Pieces</p>
+          <div id="coins-count">10 / 20</div>
+        </div>
+        <div id="timer">Reserve pleine</div>
+        <div id="coins-stack"></div>
+      </section>
+
+      <section class="stats-grid">
+        <div class="stat">
+          <span class="label">Record</span>
+          <b id="best-score">0</b>
+        </div>
+        <div class="stat">
+          <span class="label">En jeu</span>
+          <b id="live-count">0</b>
+        </div>
+        <div class="stat">
+          <span class="label">Lancers</span>
+          <b id="drop-count">0</b>
+        </div>
+        <div class="stat">
+          <span class="label">Serie</span>
+          <b id="streak-count">0</b>
+        </div>
+      </section>
+
+      <section class="controls">
+        <div class="mode-row" role="group" aria-label="Mode de risque">
+          <button class="mode-button is-active" type="button" data-mode="classic">Classic</button>
+          <button class="mode-button" type="button" data-mode="elite">Elite</button>
+          <button class="mode-button" type="button" data-mode="jackpot">Jackpot</button>
+        </div>
+
+        <div class="button-row">
+          <button id="auto-toggle" type="button" aria-pressed="false" title="Lancer automatiquement">Auto</button>
+          <button id="pause-toggle" type="button" aria-pressed="false" title="Mettre le plateau en pause">Pause</button>
+          <button id="reset-run" type="button" title="Recommencer la session">Reset</button>
+        </div>
+
+        <div class="sound-row">
+          <button id="music-toggle" type="button" aria-pressed="true" title="Activer ou couper le son">Son</button>
+          <input id="music-volume" type="range" min="0" max="100" value="12" aria-label="Volume">
+        </div>
+      </section>
+
+      <section id="history" aria-live="polite">
+        <p class="label">Derniers coups</p>
+        <ul id="history-list"></ul>
+      </section>
+    </aside>
+  </main>
+
+  <audio id="bg-music" src="fond-casino.mp3" loop preload="auto"></audio>
+
+  <script>
+    const WIDTH = 500;
+    const HEIGHT = 600;
+    const baseGravity = 0.2;
+    const friction = 0.99;
+    const holeCount = 7;
+    const segW = WIDTH / holeCount;
+    const MAX_BALLS = 12;
+    const MAX_COINS = 20;
+    const INITIAL_COINS = 10;
+    const RECHARGE_SECONDS = 20;
+
+    const scoreModes = {
+      classic: [-1, 0, 1, 5, 1, 0, -1],
+      elite: [-2, 0, 2, 7, 2, 0, -2],
+      jackpot: [-3, -1, 2, 10, 2, -1, -3]
+    };
+
+    const soundFiles = {
+      peg: 'metal.mp3',
+      booster: 'TOONTwang_Plante cartoon 10 (ID 1959)_LS.mp3',
+      barre: 'bois.mp3',
+      losange: 'verre2.mp3',
+      triangle: 'bois.mp3',
+      vbar: 'bois.mp3',
+      score: 'jeton.mp3'
+    };
+
+    const wrapper = document.getElementById('board-scale');
+    const entry = document.getElementById('entry');
+    const entryCtx = entry.getContext('2d');
+    const canvas = document.getElementById('plinko');
+    const ctx = canvas.getContext('2d');
+    const scoreCanvas = document.getElementById('score-zone');
+    const scoreCtx = scoreCanvas.getContext('2d');
+    const scoreDisplay = document.getElementById('score-display');
+    const coinsCount = document.getElementById('coins-count');
+    const coinsStack = document.getElementById('coins-stack');
+    const timerDisplay = document.getElementById('timer');
+    const bestScoreDisplay = document.getElementById('best-score');
+    const liveCountDisplay = document.getElementById('live-count');
+    const dropCountDisplay = document.getElementById('drop-count');
+    const streakCountDisplay = document.getElementById('streak-count');
+    const historyList = document.getElementById('history-list');
+    const autoToggle = document.getElementById('auto-toggle');
+    const pauseToggle = document.getElementById('pause-toggle');
+    const resetRun = document.getElementById('reset-run');
+    const musicToggle = document.getElementById('music-toggle');
+    const volumeInput = document.getElementById('music-volume');
+    const bgMusic = document.getElementById('bg-music');
+    const modeButtons = Array.from(document.querySelectorAll('.mode-button'));
+
+    const sounds = {};
+    for (const [type, src] of Object.entries(soundFiles)) {
+      const audio = new Audio(src);
+      audio.preload = 'auto';
+      sounds[type] = audio;
+    }
+
+    const patterns = {};
+    const texInfo = {
+      peg: { src: 'pegs.png', size: 20 },
+      barre: { src: 'bois2.png', size: 150 },
+      big: { src: 'diamant.png', size: 100 },
+      triangle: { src: 'bois2.png', size: 150 },
+      diamond: { src: 'losange.png', size: 200 }
+    };
+
+    for (const [key, { src, size }] of Object.entries(texInfo)) {
+      const img = new Image();
+      img.src = src;
+      img.onload = () => {
+        const pattern = ctx.createPattern(img, 'repeat');
+        if (pattern && pattern.setTransform) {
+          pattern.setTransform(new DOMMatrix().scale(size / img.width));
+        }
+        patterns[key] = pattern;
+      };
+    }
+
+    const billeImg = new Image();
+    billeImg.src = 'coin4.png';
+
+    const vBarW = WIDTH / 30;
+    const vBarH = HEIGHT / 20;
+    const verticalBars = Array.from({ length: 6 }, (_, i) => ({
+      x: WIDTH * (i + 1) / 7 - WIDTH / 300,
+      y: HEIGHT - vBarH / 2,
+      w: vBarW,
+      h: vBarH,
+      angle: 0
+    }));
+
+    const pegs = [
+      { x: WIDTH / 9, y: HEIGHT / 10 },
+      { x: WIDTH * 3 / 10, y: HEIGHT / 8 },
+      { x: 3 * WIDTH / 16, y: HEIGHT / 4.5 },
+      { x: WIDTH / 2, y: HEIGHT / 8 },
+      { x: WIDTH - WIDTH * 3 / 10, y: HEIGHT / 8 },
+      { x: WIDTH - 3 * WIDTH / 16, y: HEIGHT / 4.5 },
+      { x: WIDTH - WIDTH / 9, y: HEIGHT / 10 },
+      { x: WIDTH - 3 * WIDTH / 13, y: 3 * HEIGHT / 7 },
+      { x: WIDTH / 10, y: HEIGHT / 2 },
+      { x: WIDTH / 2, y: HEIGHT / 2 },
+      { x: 3 * WIDTH / 13, y: 3 * HEIGHT / 7 },
+      { x: WIDTH - WIDTH / 10, y: HEIGHT / 2 },
+      { x: WIDTH / 9, y: HEIGHT - HEIGHT / 4 },
+      { x: WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 },
+      { x: 2 * WIDTH / 7, y: HEIGHT - 3 * HEIGHT / 17 },
+      { x: 3 * WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 - HEIGHT / 35 },
+      { x: WIDTH / 2, y: HEIGHT - HEIGHT / 4 },
+      { x: WIDTH - 3 * WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 - HEIGHT / 35 },
+      { x: WIDTH - 2 * WIDTH / 7, y: HEIGHT - 3 * HEIGHT / 17 },
+      { x: WIDTH - WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 },
+      { x: WIDTH - WIDTH / 9, y: HEIGHT - HEIGHT / 4 }
+    ].map(peg => ({ ...peg, radius: 8 }));
+
+    const bigCircles = [
+      { x: 140, y: 350, radius: 50, boost: 1.3, hits: 0, maxHits: 15, scale: 1 },
+      { x: 360, y: 350, radius: 50, boost: 1.3, hits: 0, maxHits: 15, scale: 1 }
+    ];
+
+    const bars = [
+      { x: 170, y: 150, w: 70, h: 22, angle: -Math.PI / 4 },
+      { x: 330, y: 150, w: 70, h: 22, angle: Math.PI / 4 }
+    ];
+
+    const diamond = { x: WIDTH / 2, y: 190, w: 40, h: 60 };
+    const triangles = [
+      [{ x: 30, y: 160 }, { x: 0, y: 190 }, { x: 0, y: 130 }],
+      [{ x: WIDTH - 30, y: 160 }, { x: WIDTH, y: 190 }, { x: WIDTH, y: 130 }],
+      [{ x: 20, y: 530 }, { x: 0, y: 550 }, { x: 0, y: 510 }],
+      [{ x: WIDTH - 20, y: 530 }, { x: WIDTH, y: 550 }, { x: WIDTH, y: 510 }]
+    ];
+
+    const holes = [WIDTH / 9, WIDTH * 3 / 10, WIDTH / 2, WIDTH - WIDTH * 3 / 10, WIDTH - WIDTH / 9];
+
+    let balls = [];
+    let diamonds = 0;
+    let coins = INITIAL_COINS;
+    let drops = 0;
+    let streak = 0;
+    let activeMode = 'classic';
+    let selectedHole = 2;
+    let hoverHole = -1;
+    let paused = false;
+    let autoDrop = false;
+    let recharge = RECHARGE_SECONDS;
+    let bestScore = Number(localStorage.getItem('elitePlinkoBestScore') || 0);
+    let soundEnabled = localStorage.getItem('elitePlinkoSound') !== 'off';
+
+    bgMusic.volume = Number(localStorage.getItem('elitePlinkoVolume') || .12);
+    volumeInput.value = Math.round(bgMusic.volume * 100);
+    bgMusic.muted = !soundEnabled;
+
+    function activeScores() {
+      return scoreModes[activeMode];
+    }
+
+    function clamp(value, min, max) {
+      return Math.min(max, Math.max(min, value));
+    }
+
+    function formatDelta(value) {
+      return value > 0 ? `+${value}` : String(value);
+    }
+
+    function unlockAudio() {
+      if (!soundEnabled) return;
+      bgMusic.play().catch(() => {});
+    }
+
+    function setSound(enabled) {
+      soundEnabled = enabled;
+      bgMusic.muted = !enabled;
+      musicToggle.textContent = enabled ? 'Son' : 'Muet';
+      musicToggle.setAttribute('aria-pressed', String(enabled));
+      localStorage.setItem('elitePlinkoSound', enabled ? 'on' : 'off');
+      unlockAudio();
+    }
+
+    function playSound(type, volumeFactor = 1) {
+      if (!soundEnabled) return;
+      const source = sounds[type];
+      if (!source) return;
+      const audio = source.cloneNode();
+      audio.volume = clamp(bgMusic.volume * 1.8 * volumeFactor, 0, .9);
+      audio.play().catch(() => {});
+    }
+
+    function updateCoinsDisplay(animatedIndex = -1) {
+      coinsCount.textContent = `${coins} / ${MAX_COINS}`;
+      coinsStack.innerHTML = '';
+
+      for (let i = 0; i < MAX_COINS; i++) {
+        const coin = document.createElement('span');
+        coin.className = i < coins ? 'coin' : 'coin is-empty';
+        if (i === animatedIndex) coin.classList.add('drop-anim');
+        coinsStack.appendChild(coin);
+      }
+
+      timerDisplay.textContent = coins >= MAX_COINS ? 'Reserve pleine' : `Recharge ${recharge}s`;
+    }
+
+    function updateStats() {
+      scoreDisplay.textContent = diamonds;
+      bestScoreDisplay.textContent = bestScore;
+      liveCountDisplay.textContent = balls.length;
+      dropCountDisplay.textContent = drops;
+      streakCountDisplay.textContent = streak;
+      updateCoinsDisplay();
+    }
+
+    function addDiamonds(amount) {
+      if (amount <= 0) return;
+      diamonds += amount;
+      if (diamonds > bestScore) {
+        bestScore = diamonds;
+        localStorage.setItem('elitePlinkoBestScore', String(bestScore));
+      }
+      updateStats();
+      popScore(amount);
+    }
+
+    function addHistory(label, value) {
+      const item = document.createElement('li');
+      const tone = value > 0 ? 'gain' : value < 0 ? 'loss' : '';
+      item.innerHTML = `<span>${label}</span><strong class="${tone}">${formatDelta(value)}</strong>`;
+      historyList.prepend(item);
+      while (historyList.children.length > 6) {
+        historyList.lastElementChild.remove();
+      }
+    }
+
+    function popScore(value) {
+      const pop = document.createElement('div');
+      pop.className = 'score-pop';
+      pop.textContent = `+${value}`;
+      scoreDisplay.parentElement.appendChild(pop);
+      requestAnimationFrame(() => {
+        pop.style.transform = 'translateY(-28px)';
+        pop.style.opacity = '0';
+      });
+      setTimeout(() => pop.remove(), 950);
+    }
+
+    function popSlotScore(slot, value) {
+      const pop = document.createElement('div');
+      pop.className = 'slot-pop';
+      pop.textContent = `${formatDelta(value)} piece${Math.abs(value) > 1 ? 's' : ''}`;
+      pop.style.left = `${slot * (100 / holeCount) + (50 / holeCount)}%`;
+      wrapper.appendChild(pop);
+      requestAnimationFrame(() => {
+        pop.style.transform = 'translate(-50%, -26px)';
+        pop.style.opacity = '0';
+      });
+      setTimeout(() => pop.remove(), 850);
+    }
+
+    function boosterFull(circle) {
+      circle.hits = 0;
+      addDiamonds(2);
+      addHistory('Boost', 2);
+    }
+
+    function collideCircle(ball, circle, type) {
+      if (!circle.boost) ball.gravityFactor = 1;
+      const dx = ball.x - circle.x;
+      const dy = ball.y - circle.y;
+      const dist = Math.hypot(dx, dy);
+      const minDist = ball.radius + circle.radius;
+
+      if (dist > 0 && dist < minDist) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const overlap = minDist - dist;
+        ball.x += nx * overlap;
+        ball.y += ny * overlap;
+
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx -= 2 * dot * nx;
+        ball.vy -= 2 * dot * ny;
+
+        if (circle.boost) {
+          ball.vx *= circle.boost;
+          ball.vy *= circle.boost;
+          ball.gravityFactor = .2;
+        }
+
+        ball.vx *= friction;
+        ball.vy *= friction;
+        playSound(type, Math.hypot(ball.vx, ball.vy) / 18);
+
+        if (circle.boost) {
+          if (circle.hits < circle.maxHits) {
+            circle.hits++;
+            if (circle.hits >= circle.maxHits) boosterFull(circle);
+          }
+          circle.scale = 1.25;
+        }
+      }
+    }
+
+    function collideRectRot(ball, rect, type) {
+      ball.gravityFactor = 1;
+      const dx = ball.x - rect.x;
+      const dy = ball.y - rect.y;
+      const cos = Math.cos(-rect.angle);
+      const sin = Math.sin(-rect.angle);
+      const lx = dx * cos - dy * sin;
+      const ly = dx * sin + dy * cos;
+      const hw = rect.w / 2 + ball.radius;
+      const hh = rect.h / 2 + ball.radius;
+
+      if (Math.abs(lx) < hw && Math.abs(ly) < hh) {
+        const ox = hw - Math.abs(lx);
+        const oy = hh - Math.abs(ly);
+        let nx = 0;
+        let ny = 0;
+
+        if (ox < oy) nx = lx < 0 ? -1 : 1;
+        else ny = ly < 0 ? -1 : 1;
+
+        const nnx = nx * cos + ny * sin;
+        const nny = -nx * sin + ny * cos;
+        const overlap = Math.min(ox, oy);
+        ball.x += nnx * overlap;
+        ball.y += nny * overlap;
+
+        const dot = ball.vx * nnx + ball.vy * nny;
+        ball.vx -= 2 * dot * nnx;
+        ball.vy -= 2 * dot * nny;
+        ball.vx *= friction;
+        ball.vy *= friction;
+        playSound(type, Math.hypot(ball.vx, ball.vy) / 18);
+      }
+    }
+
+    function collideSegment(ball, p1, p2, type) {
+      ball.gravityFactor = 1;
+      const vx = p2.x - p1.x;
+      const vy = p2.y - p1.y;
+      const len2 = vx * vx + vy * vy;
+      if (!len2) return;
+
+      const t = ((ball.x - p1.x) * vx + (ball.y - p1.y) * vy) / len2;
+      if (t < 0 || t > 1) return;
+
+      const cx = p1.x + t * vx;
+      const cy = p1.y + t * vy;
+      const dx = ball.x - cx;
+      const dy = ball.y - cy;
+      const dist = Math.hypot(dx, dy);
+
+      if (dist > 0 && dist < ball.radius) {
+        const nx = dx / dist;
+        const ny = dy / dist;
+        const overlap = ball.radius - dist;
+        ball.x += nx * overlap;
+        ball.y += ny * overlap;
+
+        const dot = ball.vx * nx + ball.vy * ny;
+        ball.vx -= 2 * dot * nx;
+        ball.vy -= 2 * dot * ny;
+        ball.vx *= friction;
+        ball.vy *= friction;
+        playSound(type, Math.hypot(ball.vx, ball.vy) / 18);
+      }
+    }
+
+    function collideTriangle(ball, triangle, type) {
+      collideSegment(ball, triangle[0], triangle[1], type);
+      collideSegment(ball, triangle[1], triangle[2], type);
+      collideSegment(ball, triangle[2], triangle[0], type);
+    }
+
+    function collideDiamond(ball, shape, type) {
+      collideSegment(ball, { x: shape.x, y: shape.y - shape.h / 2 }, { x: shape.x + shape.w / 2, y: shape.y }, type);
+      collideSegment(ball, { x: shape.x + shape.w / 2, y: shape.y }, { x: shape.x, y: shape.y + shape.h / 2 }, type);
+      collideSegment(ball, { x: shape.x, y: shape.y + shape.h / 2 }, { x: shape.x - shape.w / 2, y: shape.y }, type);
+      collideSegment(ball, { x: shape.x - shape.w / 2, y: shape.y }, { x: shape.x, y: shape.y - shape.h / 2 }, type);
+    }
+
+    function scoreBall(ball) {
+      ball.scored = true;
+      const slot = clamp(Math.floor(ball.x / segW), 0, holeCount - 1);
+      const delta = activeScores()[slot];
+
+      coins = clamp(coins + delta, 0, MAX_COINS);
+      streak = delta > 0 ? streak + 1 : 0;
+      addDiamonds(Math.max(0, delta));
+      addHistory(`Case ${slot + 1}`, delta);
+      popSlotScore(slot, delta);
+      playSound('score', delta > 0 ? 1 : .55);
+      updateStats();
+    }
+
+    function update() {
+      if (paused) return;
+
+      bigCircles.forEach(circle => {
+        if (circle.scale > 1) {
+          circle.scale -= .05;
+          if (circle.scale < 1) circle.scale = 1;
+        }
+      });
+
+      balls.forEach(ball => {
+        if (!ball.alive) return;
+
+        if (ball.anim) {
+          ball.vy += baseGravity * ball.gravityFactor;
+          ball.y += ball.vy;
+          if (ball.y >= 40) {
+            ball.y = 40;
+            ball.anim = false;
+          }
+          return;
+        }
+
+        ball.vy += baseGravity * ball.gravityFactor;
+
+        if (Math.abs(ball.vx) < .05 && Math.abs(ball.vy) < .2) {
+          ball.vx += (Math.random() - .5) * .2;
+        }
+
+        ball.vx *= friction;
+        ball.vy *= friction;
+        ball.x += ball.vx;
+        ball.y += ball.vy;
+
+        if (ball.x < ball.radius) {
+          ball.x = ball.radius;
+          ball.vx *= -1;
+        }
+
+        if (ball.x > WIDTH - ball.radius) {
+          ball.x = WIDTH - ball.radius;
+          ball.vx *= -1;
+        }
+
+        pegs.forEach(peg => collideCircle(ball, peg, 'peg'));
+        bigCircles.forEach(circle => collideCircle(ball, circle, 'booster'));
+        bars.forEach(rect => collideRectRot(ball, rect, 'barre'));
+        verticalBars.forEach(rect => collideRectRot(ball, rect, 'vbar'));
+        collideDiamond(ball, diamond, 'losange');
+        triangles.forEach(triangle => collideTriangle(ball, triangle, 'triangle'));
+
+        if (!ball.scored && ball.y >= HEIGHT - ball.radius) {
+          scoreBall(ball);
+        }
+
+        if (ball.y > HEIGHT + ball.radius) ball.alive = false;
+      });
+
+      const previousCount = balls.length;
+      balls = balls.filter(ball => ball.alive);
+      if (balls.length !== previousCount) updateStats();
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, WIDTH, HEIGHT);
+
+      ctx.save();
+      const felt = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      felt.addColorStop(0, 'rgba(14, 67, 55, .52)');
+      felt.addColorStop(1, 'rgba(6, 30, 27, .48)');
+      ctx.fillStyle = felt;
+      ctx.fillRect(0, 0, WIDTH, HEIGHT);
+      ctx.restore();
+
+      ctx.fillStyle = patterns.barre || '#6c5640';
+      bars.forEach(rect => {
+        ctx.save();
+        ctx.translate(rect.x, rect.y);
+        ctx.rotate(rect.angle);
+        ctx.fillRect(-rect.w / 2, -rect.h / 2, rect.w, rect.h);
+        ctx.restore();
+      });
+
+      ctx.save();
+      ctx.translate(diamond.x, diamond.y);
+      ctx.beginPath();
+      ctx.moveTo(0, -diamond.h / 2);
+      ctx.lineTo(diamond.w / 2, 0);
+      ctx.lineTo(0, diamond.h / 2);
+      ctx.lineTo(-diamond.w / 2, 0);
+      ctx.closePath();
+      ctx.fillStyle = patterns.diamond || '#9bd3e6';
+      ctx.fill();
+      ctx.restore();
+
+      ctx.fillStyle = patterns.triangle || '#5d4935';
+      triangles.forEach(triangle => {
+        ctx.beginPath();
+        ctx.moveTo(triangle[0].x, triangle[0].y);
+        ctx.lineTo(triangle[1].x, triangle[1].y);
+        ctx.lineTo(triangle[2].x, triangle[2].y);
+        ctx.closePath();
+        ctx.fill();
+      });
+
+      ctx.fillStyle = patterns.peg || '#d5d5d5';
+      pegs.forEach(peg => {
+        ctx.beginPath();
+        ctx.arc(peg.x, peg.y, peg.radius, 0, 2 * Math.PI);
+        ctx.fill();
+      });
+
+      verticalBars.forEach(rect => {
+        ctx.fillStyle = patterns.barre || '#6c5640';
+        ctx.fillRect(rect.x - rect.w / 2, rect.y - rect.h / 2, rect.w, rect.h);
+      });
+
+      bigCircles.forEach(circle => {
+        const radius = circle.radius * circle.scale;
+        ctx.fillStyle = patterns.big || '#5ebce0';
+        ctx.beginPath();
+        ctx.arc(circle.x, circle.y, radius, 0, 2 * Math.PI);
+        ctx.fill();
+
+        const progress = circle.hits / circle.maxHits;
+        if (progress > 0) {
+          ctx.lineWidth = 9;
+          ctx.strokeStyle = '#f2c65f';
+          ctx.beginPath();
+          ctx.arc(circle.x, circle.y, radius - 8, -Math.PI / 2, -Math.PI / 2 + 2 * Math.PI * progress);
+          ctx.stroke();
+        }
+      });
+
+      balls.forEach(ball => {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(ball.x, ball.y, ball.radius, 0, 2 * Math.PI);
+        ctx.clip();
+
+        if (billeImg.complete) {
+          ctx.drawImage(billeImg, ball.x - ball.radius, ball.y - ball.radius, 2 * ball.radius, 2 * ball.radius);
+        } else {
+          ctx.fillStyle = '#f2c65f';
+          ctx.fillRect(ball.x - ball.radius, ball.y - ball.radius, 2 * ball.radius, 2 * ball.radius);
+        }
+
+        ctx.restore();
+      });
+
+      if (paused) {
+        ctx.save();
+        ctx.fillStyle = 'rgba(0, 0, 0, .42)';
+        ctx.fillRect(0, 0, WIDTH, HEIGHT);
+        ctx.fillStyle = '#f8f3dc';
+        ctx.font = '900 34px Segoe UI, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('PAUSE', WIDTH / 2, HEIGHT / 2);
+        ctx.restore();
+      }
+
+      drawEntryBar();
+      drawScoreBar();
+    }
+
+    function drawEntryBar() {
+      entryCtx.clearRect(0, 0, WIDTH, 40);
+      entryCtx.fillStyle = 'rgba(0, 0, 0, .30)';
+      entryCtx.fillRect(0, 0, WIDTH, 40);
+
+      const slotWidth = 30;
+      holes.forEach((x, index) => {
+        const isSelected = index === selectedHole;
+        const isHover = index === hoverHole;
+        entryCtx.fillStyle = isSelected ? '#f2c65f' : isHover ? '#f8f3dc' : '#0b0b0b';
+        entryCtx.strokeStyle = isSelected ? '#fff2a6' : 'rgba(248, 243, 220, .65)';
+        entryCtx.lineWidth = isSelected ? 3 : 1.5;
+        entryCtx.beginPath();
+        entryCtx.roundRect(x - slotWidth / 2, 27, slotWidth, 11, 4);
+        entryCtx.fill();
+        entryCtx.stroke();
+
+        entryCtx.fillStyle = isSelected ? '#20150b' : '#f8f3dc';
+        entryCtx.font = '700 11px Segoe UI, sans-serif';
+        entryCtx.textAlign = 'center';
+        entryCtx.textBaseline = 'middle';
+        entryCtx.fillText(String(index + 1), x, 14);
+      });
+    }
+
+    function drawScoreBar() {
+      const scores = activeScores();
+      scoreCtx.clearRect(0, 0, WIDTH, 40);
+
+      for (let i = 0; i < holeCount; i++) {
+        const seg = i === holeCount - 1 ? WIDTH - i * segW : segW;
+        const score = scores[i];
+        const gradient = scoreCtx.createLinearGradient(0, 0, 0, 40);
+
+        if (score < 0) {
+          gradient.addColorStop(0, '#f06954');
+          gradient.addColorStop(1, '#7a1f1f');
+        } else if (score === 0) {
+          gradient.addColorStop(0, '#e5a84a');
+          gradient.addColorStop(1, '#8a5420');
+        } else if (score < 5) {
+          gradient.addColorStop(0, '#ffe177');
+          gradient.addColorStop(1, '#b88926');
+        } else {
+          gradient.addColorStop(0, '#65e199');
+          gradient.addColorStop(1, '#1f7c51');
+        }
+
+        scoreCtx.fillStyle = gradient;
+        scoreCtx.fillRect(i * segW, 0, seg, 40);
+        scoreCtx.strokeStyle = 'rgba(255, 255, 255, .72)';
+        scoreCtx.strokeRect(i * segW, 0, seg, 40);
+        scoreCtx.fillStyle = '#10100c';
+        scoreCtx.font = '900 16px Segoe UI, sans-serif';
+        scoreCtx.textAlign = 'center';
+        scoreCtx.textBaseline = 'middle';
+        scoreCtx.fillText(formatDelta(score), i * segW + seg / 2, 20);
+      }
+    }
+
+    function holeFromPointer(event) {
+      const rect = entry.getBoundingClientRect();
+      const mx = (event.clientX - rect.left) * (entry.width / rect.width);
+      let index = -1;
+
+      holes.forEach((x, i) => {
+        if (Math.abs(mx - x) <= 24) index = i;
+      });
+
+      return index;
+    }
+
+    function dropBall(index = selectedHole) {
+      if (paused || coins <= 0 || balls.length >= MAX_BALLS) return false;
+
+      selectedHole = clamp(index, 0, holes.length - 1);
+      coins--;
+      drops++;
+      recharge = Math.min(recharge, RECHARGE_SECONDS);
+
+      balls.push({
+        x: holes[selectedHole],
+        y: 0,
+        vx: (Math.random() - .5) * .35,
+        vy: 0,
+        radius: 12,
+        alive: true,
+        anim: true,
+        gravityFactor: 1,
+        scored: false
+      });
+
+      updateStats();
+      unlockAudio();
+      return true;
+    }
+
+    function setMode(mode) {
+      if (!scoreModes[mode]) return;
+      activeMode = mode;
+
+      modeButtons.forEach(button => {
+        const active = button.dataset.mode === mode;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+
+      drawScoreBar();
+      addHistory(mode[0].toUpperCase() + mode.slice(1), 0);
+    }
+
+    function resetSession() {
+      balls = [];
+      diamonds = 0;
+      coins = INITIAL_COINS;
+      drops = 0;
+      streak = 0;
+      recharge = RECHARGE_SECONDS;
+      bigCircles.forEach(circle => {
+        circle.hits = 0;
+        circle.scale = 1;
+      });
+      historyList.innerHTML = '';
+      updateStats();
+    }
+
+    function setPaused(value) {
+      paused = value;
+      pauseToggle.textContent = paused ? 'Reprise' : 'Pause';
+      pauseToggle.setAttribute('aria-pressed', String(paused));
+      draw();
+    }
+
+    entry.addEventListener('pointermove', event => {
+      hoverHole = holeFromPointer(event);
+    });
+
+    entry.addEventListener('pointerleave', () => {
+      hoverHole = -1;
+    });
+
+    entry.addEventListener('pointerdown', event => {
+      const index = holeFromPointer(event);
+      if (index !== -1) dropBall(index);
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.repeat) return;
+      const number = Number(event.key);
+
+      if (number >= 1 && number <= holes.length) {
+        dropBall(number - 1);
+      } else if (event.key === ' ') {
+        event.preventDefault();
+        setPaused(!paused);
+      }
+    });
+
+    modeButtons.forEach(button => {
+      button.addEventListener('click', () => setMode(button.dataset.mode));
+    });
+
+    autoToggle.addEventListener('click', () => {
+      autoDrop = !autoDrop;
+      autoToggle.setAttribute('aria-pressed', String(autoDrop));
+      autoToggle.textContent = autoDrop ? 'Auto on' : 'Auto';
+      unlockAudio();
+    });
+
+    pauseToggle.addEventListener('click', () => setPaused(!paused));
+    resetRun.addEventListener('click', resetSession);
+
+    musicToggle.addEventListener('click', () => setSound(!soundEnabled));
+
+    volumeInput.addEventListener('input', () => {
+      bgMusic.volume = Number(volumeInput.value) / 100;
+      localStorage.setItem('elitePlinkoVolume', String(bgMusic.volume));
+    });
+
+    document.body.addEventListener('pointerdown', unlockAudio, { once: true });
+
+    setInterval(() => {
+      if (paused) return;
+
+      if (coins < MAX_COINS) {
+        recharge--;
+        if (recharge <= 0) {
+          const before = coins;
+          coins = clamp(coins + 1, 0, MAX_COINS);
+          recharge = RECHARGE_SECONDS;
+          updateCoinsDisplay(coins > before ? coins - 1 : -1);
+          return;
+        }
+      } else {
+        recharge = RECHARGE_SECONDS;
+      }
+
+      updateCoinsDisplay();
+    }, 1000);
+
+    setInterval(() => {
+      if (autoDrop && !paused) {
+        if (!dropBall(selectedHole)) autoDrop = false;
+        autoToggle.setAttribute('aria-pressed', String(autoDrop));
+        autoToggle.textContent = autoDrop ? 'Auto on' : 'Auto';
+      }
+    }, 700);
+
+    function loop() {
+      update();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    setSound(soundEnabled);
+    updateStats();
+    setMode(activeMode);
+    loop();
+  </script>
+</body>
+</html>
