@@ -422,14 +422,25 @@
       }
     }
 
-    @media (max-width: 420px) {
-      h1 {
-        font-size: 28px;
+    @media (max-width: 560px) {
+      body {
+        padding: 12px;
+      }
+
+      #board-wrap,
+      #sidebar {
+        width: min(100%, 402px);
       }
 
       .topline {
         align-items: start;
         flex-direction: column;
+      }
+    }
+
+    @media (max-width: 420px) {
+      h1 {
+        font-size: 28px;
       }
 
       .mode-row,
