@@ -67,6 +67,7 @@
 
     button[aria-pressed="true"],
     .mode-button.is-active,
+    .map-button.is-active,
     .modifier-button.is-active,
     .setup-modifier.is-active {
       color: #1d1710;
@@ -362,6 +363,7 @@
     }
 
     .mode-row,
+    .map-row,
     .button-row,
     .modifier-row,
     #bonus-shop {
@@ -371,11 +373,16 @@
     }
 
     .mode-button,
+    .map-button,
     .modifier-button,
     .setup-modifier {
       padding-inline: 6px;
       font-size: 13px;
       font-weight: 800;
+    }
+
+    .map-row {
+      grid-template-columns: repeat(2, 1fr);
     }
 
     .dashboard-card {
@@ -661,6 +668,7 @@
       }
 
       .mode-row,
+      .map-row,
       .button-row,
       .modifier-row,
       #bonus-shop,
@@ -705,6 +713,10 @@
           <span>Mode courant</span>
           <strong id="current-mode">Classic - Stable</strong>
         </div>
+        <div class="run-status">
+          <span>Map</span>
+          <strong id="current-map">Casino Classic</strong>
+        </div>
       </section>
 
       <section class="wallet" aria-live="polite">
@@ -740,6 +752,11 @@
           <button class="mode-button is-active" type="button" data-mode="classic">Classic</button>
           <button class="mode-button" type="button" data-mode="elite">Elite</button>
           <button class="mode-button" type="button" data-mode="jackpot">Jackpot</button>
+        </div>
+
+        <div class="map-row" role="group" aria-label="Map de Plinko">
+          <button class="map-button is-active" type="button" data-map="casino">Casino Classic</button>
+          <button class="map-button" type="button" data-map="vortex">Vortex</button>
         </div>
 
         <div class="modifier-row" role="group" aria-label="Modificateur de run">
@@ -794,6 +811,10 @@
         <button class="mode-button is-active" type="button" data-mode="classic">Classic</button>
         <button class="mode-button" type="button" data-mode="elite">Elite</button>
         <button class="mode-button" type="button" data-mode="jackpot">Jackpot</button>
+      </div>
+      <div class="map-row" role="group" aria-label="Map de Plinko">
+        <button class="map-button is-active" type="button" data-map="casino">Casino Classic</button>
+        <button class="map-button" type="button" data-map="vortex">Vortex</button>
       </div>
       <div class="setup-actions" role="group" aria-label="Modificateur de run">
         <button class="setup-modifier is-active" type="button" data-modifier="stable">Stable</button>
@@ -898,6 +919,7 @@
     const dropCountDisplay = document.getElementById('drop-count');
     const streakCountDisplay = document.getElementById('streak-count');
     const currentModeDisplay = document.getElementById('current-mode');
+    const currentMapDisplay = document.getElementById('current-map');
     const runStatusDisplay = document.getElementById('run-status');
     const missionList = document.getElementById('mission-list');
     const boosterList = document.getElementById('booster-list');
@@ -914,6 +936,7 @@
     const runSummary = document.getElementById('run-summary');
     const startRunButton = document.getElementById('start-run');
     const modeButtons = Array.from(document.querySelectorAll('.mode-button'));
+    const mapButtons = Array.from(document.querySelectorAll('.map-button'));
     const modifierButtons = Array.from(document.querySelectorAll('.modifier-button'));
     const setupModifierButtons = Array.from(document.querySelectorAll('.setup-modifier'));
     const bonusButtons = Array.from(document.querySelectorAll('.bonus-button'));
@@ -989,47 +1012,98 @@
       angle: 0
     }));
 
-    const pegs = [
-      { x: WIDTH / 9, y: HEIGHT / 10 },
-      { x: WIDTH * 3 / 10, y: HEIGHT / 8 },
-      { x: 3 * WIDTH / 16, y: HEIGHT / 4.5 },
-      { x: WIDTH / 2, y: HEIGHT / 8 },
-      { x: WIDTH - WIDTH * 3 / 10, y: HEIGHT / 8 },
-      { x: WIDTH - 3 * WIDTH / 16, y: HEIGHT / 4.5 },
-      { x: WIDTH - WIDTH / 9, y: HEIGHT / 10 },
-      { x: WIDTH - 3 * WIDTH / 13, y: 3 * HEIGHT / 7 },
-      { x: WIDTH / 10, y: HEIGHT / 2 },
-      { x: WIDTH / 2, y: HEIGHT / 2 },
-      { x: 3 * WIDTH / 13, y: 3 * HEIGHT / 7 },
-      { x: WIDTH - WIDTH / 10, y: HEIGHT / 2 },
-      { x: WIDTH / 9, y: HEIGHT - HEIGHT / 4 },
-      { x: WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 },
-      { x: 2 * WIDTH / 7, y: HEIGHT - 3 * HEIGHT / 17 },
-      { x: 3 * WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 - HEIGHT / 35 },
-      { x: WIDTH / 2, y: HEIGHT - HEIGHT / 4 },
-      { x: WIDTH - 3 * WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 - HEIGHT / 35 },
-      { x: WIDTH - 2 * WIDTH / 7, y: HEIGHT - 3 * HEIGHT / 17 },
-      { x: WIDTH - WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 },
-      { x: WIDTH - WIDTH / 9, y: HEIGHT - HEIGHT / 4 }
-    ].map(peg => ({ ...peg, radius: 8 }));
+    const plinkoMaps = {
+      casino: {
+        label: 'Casino Classic',
+        tone: 'green',
+        pegs: [
+          { x: WIDTH / 9, y: HEIGHT / 10 },
+          { x: WIDTH * 3 / 10, y: HEIGHT / 8 },
+          { x: 3 * WIDTH / 16, y: HEIGHT / 4.5 },
+          { x: WIDTH / 2, y: HEIGHT / 8 },
+          { x: WIDTH - WIDTH * 3 / 10, y: HEIGHT / 8 },
+          { x: WIDTH - 3 * WIDTH / 16, y: HEIGHT / 4.5 },
+          { x: WIDTH - WIDTH / 9, y: HEIGHT / 10 },
+          { x: WIDTH - 3 * WIDTH / 13, y: 3 * HEIGHT / 7 },
+          { x: WIDTH / 10, y: HEIGHT / 2 },
+          { x: WIDTH / 2, y: HEIGHT / 2 },
+          { x: 3 * WIDTH / 13, y: 3 * HEIGHT / 7 },
+          { x: WIDTH - WIDTH / 10, y: HEIGHT / 2 },
+          { x: WIDTH / 9, y: HEIGHT - HEIGHT / 4 },
+          { x: WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 },
+          { x: 2 * WIDTH / 7, y: HEIGHT - 3 * HEIGHT / 17 },
+          { x: 3 * WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 - HEIGHT / 35 },
+          { x: WIDTH / 2, y: HEIGHT - HEIGHT / 4 },
+          { x: WIDTH - 3 * WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 - HEIGHT / 35 },
+          { x: WIDTH - 2 * WIDTH / 7, y: HEIGHT - 3 * HEIGHT / 17 },
+          { x: WIDTH - WIDTH / 7, y: HEIGHT - 2 * HEIGHT / 17 },
+          { x: WIDTH - WIDTH / 9, y: HEIGHT - HEIGHT / 4 }
+        ],
+        boosters: [
+          { x: 140, y: 350, radius: 50, boost: 1.3, maxHits: 15, name: 'Gauche' },
+          { x: 360, y: 350, radius: 50, boost: 1.3, maxHits: 15, name: 'Droite' }
+        ],
+        bars: [
+          { x: 170, y: 150, w: 70, h: 22, angle: -Math.PI / 4 },
+          { x: 330, y: 150, w: 70, h: 22, angle: Math.PI / 4 }
+        ],
+        diamond: { x: WIDTH / 2, y: 190, w: 40, h: 60 },
+        triangles: [
+          [{ x: 30, y: 160 }, { x: 0, y: 190 }, { x: 0, y: 130 }],
+          [{ x: WIDTH - 30, y: 160 }, { x: WIDTH, y: 190 }, { x: WIDTH, y: 130 }],
+          [{ x: 20, y: 530 }, { x: 0, y: 550 }, { x: 0, y: 510 }],
+          [{ x: WIDTH - 20, y: 530 }, { x: WIDTH, y: 550 }, { x: WIDTH, y: 510 }]
+        ]
+      },
+      vortex: {
+        label: 'Vortex',
+        tone: 'blue',
+        pegs: [
+          { x: 250, y: 70, radius: 7 },
+          { x: 170, y: 115, radius: 8 },
+          { x: 330, y: 115, radius: 8 },
+          { x: 110, y: 185, radius: 8 },
+          { x: 250, y: 170, radius: 7 },
+          { x: 390, y: 185, radius: 8 },
+          { x: 75, y: 280, radius: 9 },
+          { x: 190, y: 260, radius: 8 },
+          { x: 310, y: 260, radius: 8 },
+          { x: 425, y: 280, radius: 9 },
+          { x: 115, y: 395, radius: 8 },
+          { x: 235, y: 365, radius: 7 },
+          { x: 265, y: 365, radius: 7 },
+          { x: 385, y: 395, radius: 8 },
+          { x: 85, y: 485, radius: 8 },
+          { x: 160, y: 520, radius: 8 },
+          { x: 250, y: 505, radius: 9 },
+          { x: 340, y: 520, radius: 8 },
+          { x: 415, y: 485, radius: 8 }
+        ],
+        boosters: [
+          { x: 95, y: 335, radius: 42, boost: 1.45, maxHits: 12, name: 'Ouest' },
+          { x: 405, y: 335, radius: 42, boost: 1.45, maxHits: 12, name: 'Est' }
+        ],
+        bars: [
+          { x: 145, y: 205, w: 92, h: 20, angle: Math.PI / 6 },
+          { x: 355, y: 205, w: 92, h: 20, angle: -Math.PI / 6 },
+          { x: 170, y: 430, w: 86, h: 20, angle: -Math.PI / 5 },
+          { x: 330, y: 430, w: 86, h: 20, angle: Math.PI / 5 }
+        ],
+        diamond: { x: WIDTH / 2, y: 315, w: 48, h: 78 },
+        triangles: [
+          [{ x: 42, y: 120 }, { x: 0, y: 160 }, { x: 0, y: 80 }],
+          [{ x: WIDTH - 42, y: 120 }, { x: WIDTH, y: 160 }, { x: WIDTH, y: 80 }],
+          [{ x: 58, y: 565 }, { x: 0, y: 600 }, { x: 0, y: 525 }],
+          [{ x: WIDTH - 58, y: 565 }, { x: WIDTH, y: 600 }, { x: WIDTH, y: 525 }]
+        ]
+      }
+    };
 
-    const bigCircles = [
-      { x: 140, y: 350, radius: 50, boost: 1.3, hits: 0, maxHits: 15, scale: 1, name: 'Gauche', readyPulse: 0 },
-      { x: 360, y: 350, radius: 50, boost: 1.3, hits: 0, maxHits: 15, scale: 1, name: 'Droite', readyPulse: 0 }
-    ];
-
-    const bars = [
-      { x: 170, y: 150, w: 70, h: 22, angle: -Math.PI / 4 },
-      { x: 330, y: 150, w: 70, h: 22, angle: Math.PI / 4 }
-    ];
-
-    const diamond = { x: WIDTH / 2, y: 190, w: 40, h: 60 };
-    const triangles = [
-      [{ x: 30, y: 160 }, { x: 0, y: 190 }, { x: 0, y: 130 }],
-      [{ x: WIDTH - 30, y: 160 }, { x: WIDTH, y: 190 }, { x: WIDTH, y: 130 }],
-      [{ x: 20, y: 530 }, { x: 0, y: 550 }, { x: 0, y: 510 }],
-      [{ x: WIDTH - 20, y: 530 }, { x: WIDTH, y: 550 }, { x: WIDTH, y: 510 }]
-    ];
+    let pegs = [];
+    let bigCircles = [];
+    let bars = [];
+    let diamond = { x: WIDTH / 2, y: 190, w: 40, h: 60 };
+    let triangles = [];
 
     const holes = [WIDTH / 9, WIDTH * 3 / 10, WIDTH / 2, WIDTH - WIDTH * 3 / 10, WIDTH - WIDTH / 9];
 
@@ -1040,6 +1114,7 @@
     let streak = 0;
     let activeMode = 'classic';
     let activeModifier = 'stable';
+    let activeMap = 'casino';
     let activeMissions = [];
     let selectedHole = 2;
     let hoverHole = -1;
@@ -1062,6 +1137,30 @@
 
     function currentModifier() {
       return runModifiers[activeModifier] || runModifiers.stable;
+    }
+
+    function currentMap() {
+      return plinkoMaps[activeMap] || plinkoMaps.casino;
+    }
+
+    function clonePoint(point) {
+      return { ...point };
+    }
+
+    function loadMapLayout() {
+      const map = currentMap();
+      pegs = map.pegs.map(peg => ({ radius: 8, ...clonePoint(peg) }));
+      bigCircles = map.boosters.map(circle => ({
+        ...clonePoint(circle),
+        hits: 0,
+        scale: 1,
+        readyPulse: 0
+      }));
+      bars = map.bars.map(clonePoint);
+      diamond = clonePoint(map.diamond);
+      triangles = map.triangles.map(triangle => triangle.map(clonePoint));
+      drawScoreBar();
+      updateBoostersDisplay();
     }
 
     function maxCoins() {
@@ -1181,11 +1280,13 @@
       dropCountDisplay.textContent = drops;
       streakCountDisplay.textContent = streak;
       currentModeDisplay.textContent = `${modeLabel(activeMode)} - ${currentModifier().label}`;
+      currentMapDisplay.textContent = currentMap().label;
       runStatusDisplay.textContent = runOver ? 'Run termine' : runActive ? 'En cours' : 'Pret a jouer';
       updateCoinsDisplay();
       updateMissionsDisplay();
       updateBoostersDisplay();
       updateBonusButtons();
+      updateMapButtons();
     }
 
     function addDiamonds(amount) {
@@ -1342,6 +1443,12 @@
       bonusButtons.forEach(button => {
         const bonus = bonusShop[button.dataset.bonus];
         button.disabled = !runActive || runOver || !bonus || diamonds < bonus.cost;
+      });
+    }
+
+    function updateMapButtons() {
+      mapButtons.forEach(button => {
+        button.disabled = runActive && !runOver;
       });
     }
 
@@ -1580,10 +1687,25 @@
 
       ctx.save();
       const felt = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-      felt.addColorStop(0, 'rgba(14, 67, 55, .52)');
-      felt.addColorStop(1, 'rgba(6, 30, 27, .48)');
+      if (currentMap().tone === 'blue') {
+        felt.addColorStop(0, 'rgba(19, 60, 86, .58)');
+        felt.addColorStop(1, 'rgba(13, 27, 47, .52)');
+      } else {
+        felt.addColorStop(0, 'rgba(14, 67, 55, .52)');
+        felt.addColorStop(1, 'rgba(6, 30, 27, .48)');
+      }
       ctx.fillStyle = felt;
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
+
+      if (currentMap().tone === 'blue') {
+        ctx.strokeStyle = 'rgba(139, 205, 255, .12)';
+        ctx.lineWidth = 2;
+        for (let radius = 70; radius < 320; radius += 44) {
+          ctx.beginPath();
+          ctx.ellipse(WIDTH / 2, 310, radius * .82, radius, Math.PI / 9, 0, 2 * Math.PI);
+          ctx.stroke();
+        }
+      }
       ctx.restore();
 
       ctx.fillStyle = patterns.barre || '#6c5640';
@@ -1819,6 +1941,22 @@
       if (runActive) addHistory(currentModifier().label, 0, 'Modificateur');
     }
 
+    function setMap(mapId) {
+      if (!plinkoMaps[mapId]) return;
+      if (runActive && !runOver) return;
+      activeMap = mapId;
+
+      mapButtons.forEach(button => {
+        const active = button.dataset.map === mapId;
+        button.classList.toggle('is-active', active);
+        button.setAttribute('aria-pressed', String(active));
+      });
+
+      loadMapLayout();
+      updateStats();
+      if (runActive) addHistory(currentMap().label, 0, 'Map');
+    }
+
     function resetSession() {
       balls = [];
       diamonds = 0;
@@ -1865,7 +2003,7 @@
         startRunButton.textContent = 'Relancer';
       } else {
         setupTitle.textContent = 'Preparer le run';
-        setupCopy.textContent = `Choisis ton mode et ton modificateur. ${currentModifier().label}: ${currentModifier().description}.`;
+        setupCopy.textContent = `Choisis ton mode, ta map et ton modificateur. ${currentMap().label}: ${mapDescription(activeMap)}.`;
         runSummary.textContent = '';
         startRunButton.textContent = 'Jouer';
       }
@@ -1876,12 +2014,18 @@
     function startRun() {
       runOver = false;
       resetSession();
+      loadMapLayout();
       runActive = true;
       setupOverlay.hidden = true;
       setPaused(false);
-      addHistory('Nouveau run', 0, `${modeLabel(activeMode)} / ${currentModifier().label}`);
+      addHistory('Nouveau run', 0, `${currentMap().label} / ${modeLabel(activeMode)} / ${currentModifier().label}`);
       unlockAudio();
       updateStats();
+    }
+
+    function mapDescription(mapId) {
+      if (mapId === 'vortex') return 'obstacles en spirale, centre plus ouvert, boosters lateraux rapides';
+      return 'layout historique avec rebonds equilibrés et boosters centraux';
     }
 
     function buyBonus(type) {
@@ -1930,11 +2074,20 @@
       button.addEventListener('click', () => setMode(button.dataset.mode));
     });
 
+    mapButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        setMap(button.dataset.map);
+        if (!runActive) {
+          setupCopy.textContent = `Choisis ton mode, ta map et ton modificateur. ${currentMap().label}: ${mapDescription(activeMap)}.`;
+        }
+      });
+    });
+
     [...modifierButtons, ...setupModifierButtons].forEach(button => {
       button.addEventListener('click', () => {
         setModifier(button.dataset.modifier);
         if (!runActive) {
-          setupCopy.textContent = `Choisis ton mode et ton modificateur. ${currentModifier().label}: ${currentModifier().description}.`;
+          setupCopy.textContent = `Choisis ton mode, ta map et ton modificateur. ${currentModifier().label}: ${currentModifier().description}.`;
         }
       });
     });
@@ -2005,7 +2158,9 @@
 
     setSound(soundEnabled);
     resetMissions();
+    loadMapLayout();
     setMode(activeMode);
+    setMap(activeMap);
     setModifier(activeModifier);
     showSetupOverlay('start');
     updateStats();
