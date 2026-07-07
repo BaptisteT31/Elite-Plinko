@@ -1199,7 +1199,6 @@
     const holes = [WIDTH / 9, WIDTH * 3 / 10, WIDTH / 2, WIDTH - WIDTH * 3 / 10, WIDTH - WIDTH / 9];
 
     let balls = [];
-    let boosterCoins = [];
     let diamonds = 0;
     let coins = INITIAL_COINS;
     let drops = 0;
@@ -1549,69 +1548,11 @@
     }
 
     function rainCoinsOnSlots() {
-      const capacity = Math.max(0, maxCoins() - coins);
-      let credited = 0;
-
-      for (let slot = 0; slot < holeCount; slot++) {
-        const canCredit = credited < capacity;
-        boosterCoins.push({
-          x: slot * segW + segW / 2,
-          y: HEIGHT - 132,
-          vy: 0,
-          radius: 12,
-          alive: true,
-          credited: false,
-          canCredit,
-          restFrames: 18
-        });
-        if (canCredit) credited++;
-      }
-
-      return credited;
-    }
-
-    function updateBoosterCoins() {
-      boosterCoins.forEach(coin => {
-        if (!coin.alive) return;
-
-        if (!coin.credited) {
-          coin.vy += .46;
-          coin.y += coin.vy;
-        }
-
-        if (!coin.credited && coin.y >= HEIGHT - coin.radius) {
-          coin.y = HEIGHT - coin.radius;
-          coin.credited = true;
-          if (coin.canCredit && coins < maxCoins()) {
-            coins++;
-            setMissionProgress('coins15', coins);
-            updateCoinsDisplay(coins - 1);
-          }
-        }
-
-        if (coin.credited) {
-          coin.restFrames--;
-          if (coin.restFrames <= 0) coin.alive = false;
-        }
+      let launched = 0;
+      holes.forEach((_, index) => {
+        if (dropBall(index, { free: true, fromBooster: true })) launched++;
       });
-
-      boosterCoins = boosterCoins.filter(coin => coin.alive);
-    }
-
-    function drawCoinSprite(x, y, radius) {
-      ctx.save();
-      ctx.beginPath();
-      ctx.arc(x, y, radius, 0, 2 * Math.PI);
-      ctx.clip();
-
-      if (billeImg.complete) {
-        ctx.drawImage(billeImg, x - radius, y - radius, 2 * radius, 2 * radius);
-      } else {
-        ctx.fillStyle = '#f2c65f';
-        ctx.fillRect(x - radius, y - radius, 2 * radius, 2 * radius);
-      }
-
-      ctx.restore();
+      return launched;
     }
 
     function boosterFull(circle) {
@@ -1620,7 +1561,7 @@
       const gained = rainCoinsOnSlots();
       advanceMission('boost2');
       setMissionProgress('coins15', coins);
-      addHistory('Booster bleu', gained, 'Pluie de pieces');
+      addHistory('Booster bleu', gained, 'Lancers gratuits');
       updateStats();
     }
 
@@ -1833,8 +1774,6 @@
         if (circle.readyPulse > 0) circle.readyPulse--;
       });
 
-      updateBoosterCoins();
-
       balls.forEach(ball => {
         if (!ball.alive) return;
 
@@ -1992,8 +1931,6 @@
         }
       });
 
-      boosterCoins.forEach(coin => drawCoinSprite(coin.x, coin.y, coin.radius));
-
       balls.forEach(ball => {
         ctx.save();
         ctx.beginPath();
@@ -2091,25 +2028,30 @@
       return index;
     }
 
-    function dropBall(index = selectedHole) {
-      if (!runActive || paused || coins <= 0 || balls.length >= MAX_BALLS) return false;
+    function dropBall(index = selectedHole, options = {}) {
+      const freeDrop = Boolean(options.free);
+      const fromBooster = Boolean(options.fromBooster);
+      const ballLimit = freeDrop ? MAX_BALLS + holes.length : MAX_BALLS;
+      if (!runActive || paused || (!freeDrop && coins <= 0) || balls.length >= ballLimit) return false;
 
-      selectedHole = clamp(index, 0, holes.length - 1);
-      if (selectedHole === lastSlotDrop) {
+      const launchHole = clamp(index, 0, holes.length - 1);
+      if (!fromBooster) selectedHole = launchHole;
+
+      if (!fromBooster && launchHole === lastSlotDrop) {
         sameSlotStreak++;
-      } else {
-        lastSlotDrop = selectedHole;
+      } else if (!fromBooster) {
+        lastSlotDrop = launchHole;
         sameSlotStreak = 1;
       }
-      setMissionProgress('slot10', sameSlotStreak);
+      if (!fromBooster) setMissionProgress('slot10', sameSlotStreak);
 
-      coins--;
+      if (!freeDrop) coins--;
       drops++;
       recharge = Math.min(recharge, rechargeSeconds());
       const speed = currentModifier().speed;
 
       balls.push({
-        x: holes[selectedHole],
+        x: holes[launchHole],
         y: 0,
         vx: (Math.random() - .5) * .35 * speed,
         vy: 0,
@@ -2118,7 +2060,7 @@
         anim: true,
         gravityFactor: speed,
         scored: false,
-        lastX: holes[selectedHole],
+        lastX: holes[launchHole],
         lastY: 0,
         stallFrames: 0
       });
@@ -2179,7 +2121,6 @@
 
     function resetSession() {
       balls = [];
-      boosterCoins = [];
       diamonds = 0;
       coins = clamp(INITIAL_COINS, 0, maxCoins());
       drops = 0;
